@@ -38,7 +38,11 @@ private:
     void resizeEvent(QResizeEvent*) override;
     void updateLabelText(int x);
     void updateImage(cv::Mat frame);
+    void process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY, int code);
 private:
+    std::vector<double> center_y;
+    std::vector<double> center_x;
+
     QStackedWidget *stack;
     QLabel* myLabel;
     QLabel* myImageLabel;
@@ -54,16 +58,19 @@ private:
     plotWidget *myPlot;
 
 
-    std::vector<int> average_blue;
-    std::vector<int> average_green;
-    std::vector<int> average_red;
+    std::vector<double> average_B;
+    std::vector<double> average_G;
+    std::vector<double> average_R;
+    std::vector<double> average_H;
+    std::vector<double> average_S;
+    std::vector<double> average_V;
     cv::Mat text_frame;
     cv::Mat frameBtn1;
     cv::Mat frameBtn2;
     cv::Mat frameBtn3;
     cv::Mat frameBtn4;
-    std::vector<int> cX;
-    std::vector<int> cY;
+    std::vector<double> cX;
+    std::vector<double> cY;
     bool processedBtn[4];
     std::vector<QPointF> points1;
     std::vector<QPointF> points2;

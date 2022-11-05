@@ -9,25 +9,27 @@
 #include <qtextformat.h>
 #include <QTransform>
 #include "sampledialog.h"
+#include "abcddialog.h"
 void printVector(std::vector<QPointF> vector);
 void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
     , stack(new QStackedWidget(this))
     , myLabel(new QLabel(this))
     , myImageLabel(new QLabel(this))
-    , myButton1(new QPushButton("color",this))
-    , myButton2(new QPushButton("Glucose",this))
-    , myButton3(new QPushButton(this))
-    , myButton4(new QPushButton("new color", this))
+    , myButton1(new QPushButton("reagent",this))
+    , myButton2(new QPushButton("linear",this))
+    , myButton3(new QPushButton("unused",this))
+    , myButton4(new QPushButton("unused", this))
     , chooseImageButton(new QPushButton("Select",this))
     , btn_stackToImage(new QPushButton("Image",this))
     , btn_stackToChart(new QPushButton("Chart",this))
     , myPlot(new plotWidget(this,"chart"))
 {
     m_sampleType = sampleType_non;
-    myButton3->setText("H₂O₂");
+
     myLabel->setAlignment(Qt::AlignCenter);
     myLabel->setWordWrap(true);
     myLabel->setMargin(0);
@@ -36,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     myLabel->setFont(ft);
     updateLabelText(1);
     myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    myPlot->setAixs("concentration",0,1,8,"RGB",0,255,6);
+    myPlot->setAixs("concentration",0,1,8,"RGB",0,300,6);
     myPlot->initChart();
     myPlot->hide();
 //    myPlot->set
@@ -116,16 +118,40 @@ void MainWindow::updateLabelText(int x)
     }
     this->myLabel->setText(info);
 }
+void MainWindow::process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY, int code )
+{
+    average_B.clear();
+    average_G.clear();
+    average_R.clear();
+    average_H.clear();
+    average_S.clear();
+    average_V.clear();
+    cv::Mat frame_temp;
+    if(code == cv::COLOR_BGR2HSV)
+        cv::cvtColor(frame, frame_temp, code);
+    else
+        frame_temp = frame;
+    cv::Mat cut_frame;
+    cv::Scalar tempVal;
+    for(int i=0;i<int(cX.size());i++)
+    {
+        for(int j=0;j<int(cY.size());j++)
+        {
+            qDebug()<<"point:"<<cX[i]-2<<","<<cY[j]-2;
+            cut_frame = frame_temp(cv::Rect(cX[i]-2,cY[j]-2,4,4));
+            tempVal = cv::mean(cut_frame);
+            average_H.push_back(tempVal[0]);
+            average_S.push_back(tempVal[1]);
+            average_V.push_back(tempVal[2]);
+        }
+    }
+}
+
 void MainWindow::slot_chooseImage()
 {
-    sampleDialog* dialog = new sampleDialog();
-    if(dialog->exec())
-    {
-        m_sampleType = dialog->m_sampleType;
-    }
-    if(m_sampleType==sampleType_non)
-        return;
-//    QString sender1 = sender()->objectName();
+    center_y={270, 500, 700, 950, 1150, 1400, 1600, 1825};
+    center_x={320, 550, 770, 990, 1220, 1450, 1680, 1900, 2125, 2350, 2570, 2800};
+
     this->setFocus();
     QFileDialog* filechoose = new QFileDialog(this);
     filechoose->setWindowTitle("choose image");
@@ -141,9 +167,6 @@ void MainWindow::slot_chooseImage()
     }
     cX.clear();
     cY.clear();
-    average_blue.clear();
-    average_green.clear();
-    average_red.clear();
     points1.clear();
     points2.clear();
 //    myPlot->initChart();
@@ -160,8 +183,12 @@ void MainWindow::slot_chooseImage()
         img_temp = img_temp.transformed(matrix);
     }
     img_temp = img_temp.convertToFormat(QImage::Format_BGR888);
+    img_temp = img_temp.scaled(QSize(4680,3456),Qt::IgnoreAspectRatio);
+    qDebug()<<"img_temp"<<img_temp.size().width()<<" "<<img_temp.size().height();
     cv::Mat frame(img_temp.height(),img_temp.width(),CV_8UC3,(uchar*)img_temp.bits(),img_temp.bytesPerLine());
+    qDebug()<<"frame1:"<<frame.cols<<" "<<frame.rows;
     cv::resize(frame,frame,cv::Size(4680,3456),0,0,cv::INTER_CUBIC);
+    qDebug()<<"frame2:"<<frame.cols<<" "<<frame.rows;
     int rows = frame.rows;
     int colums = frame.cols;
     cv::cvtColor(frame,imgage_hsv,cv::COLOR_BGR2HSV);
@@ -199,60 +226,31 @@ void MainWindow::slot_chooseImage()
         }
     }
     frame = frame(cv::Rect(y_top,x_top,y_bottom-y_top,x_bottom-x_top));
+    qDebug()<<"frame3:"<<frame.cols<<" "<<frame.rows;
     text_frame = frame;
     text_frame.copyTo(frameBtn1);
     text_frame.copyTo(frameBtn2);
     text_frame.copyTo(frameBtn3);
     text_frame.copyTo(frameBtn4);
-    std::vector<int> lower_blue = {78, 30, 46};
-    std::vector<int> upper_blue = {100, 255, 255};
-    cv::cvtColor(frame,imgage_hsv,cv::COLOR_BGR2HSV);
-    cv::inRange(imgage_hsv,lower_blue,upper_blue,mask0);
-    cv::medianBlur(mask0,mask0,25);
-    /////////////////////////////////////center///////////////////////////////////
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(mask0,contours,cv::RETR_EXTERNAL,cv::CHAIN_APPROX_SIMPLE);
-    auto begin = contours.begin();
-    auto end = contours.end();
-    double area = 0;
-    cv::Moments M;
-    while(begin!=end)
+    process_Color(text_frame, center_x, center_y,0);
+    process_Color(text_frame, center_x, center_y, cv::COLOR_BGR2HSV);
+
+    auto begin_ave_s = average_S.begin();
+    auto end_ave_s = average_S.end();
+    while(begin_ave_s!=end_ave_s)
     {
-        area = cv::contourArea(*begin);
-        if(area > 12000)
-        {
-            qDebug()<<"contourArea:"<<area;
-            M = cv::moments(*begin);
-            cX.push_back(int(M.m10 / (M.m00+1)));
-            cY.push_back(int(M.m01 / (M.m00+1)));
-            qDebug()<<"M10:"<<M.m10<<"(cX,cY):["<<cX.back()<<","<<cY.back()<<"]";
-        }
-//        if(cX.back()>mask0.cols||cY.back()>mask0.rows)
-//        {
-//            cX.pop_back();
-//            cY.pop_back()
-//        }
-        ++begin;
+        if((*begin_ave_s+22.1059)/286.3640 < 0.95)
+            *begin_ave_s = double((*begin_ave_s + 22.1059)/286.3640);
+        else
+            *begin_ave_s = double((*begin_ave_s - 219.7655)/(-28.0058));
+        begin_ave_s++;
     }
-    auto begin1 = cX.begin();
-    auto begin1_1 = cY.begin();
-    auto end1 = cX.end();
-    cv::Mat cut_frame;
-    cv::Scalar tempVal;
-    while(begin1!=end1)
-    {
-        cut_frame = frame(cv::Rect(*begin1-5,*begin1_1-5,10,10));
-        tempVal = cv::mean(cut_frame);
-        average_blue.push_back(tempVal[0]);
-        average_green.push_back(tempVal[1]);
-        average_red.push_back(tempVal[2]);
-        begin1++;
-        begin1_1++;
-    }
+
+    updateImage(text_frame);
+
+
     this->myPlot->myLineSeries->clear();
     this->myPlot->myScatters->clear();
-//    if(sender1 == "chooseImage")
-//        emit this->myButton1->pressed();
 }
 void MainWindow::updateImage(cv::Mat frame)
 {
@@ -272,93 +270,141 @@ void MainWindow::updateImage(cv::Mat frame)
 
 void MainWindow::slot_processBtn1()
 {
+    center_y={270, 500, 700, 950, 1150, 1400, 1600, 1825};
+    center_x={320, 550, 770, 990, 1220, 1450, 1680, 1900, 2125, 2350, 2570, 2800};
+    sampleDialog* dialog = new sampleDialog();
+    if(dialog->exec())
+    {
+        m_sampleType = dialog->m_sampleType;
+    }
+    if(m_sampleType==sampleType_non)
+        return;
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
-    if(!processedBtn[0])
+    auto begin_ave_s = average_S.begin();
+    auto end_ave_s = average_S.end();
+
+    std::string text;
+    int i = 0;
+    while(begin_ave_s!=end_ave_s)
     {
-        std::string text;
-        std::vector<qreal> y_green;
-        for(int i=0;i<int(average_green.size());i++)
+        qDebug()<<"average_S"<< *begin_ave_s;
+        if(*begin_ave_s>-1)
         {
-            text.append("red:");
-            text.append(std::to_string((average_red[i])));
-            text.append(",green:");
-            text.append(std::to_string(average_green[i]));
-            text.append(",blue:");
-            text.append(std::to_string(average_blue[i]));
-            cv::putText(frameBtn1,text,cv::Point(100,(i+1)*80),cv::FONT_HERSHEY_SIMPLEX,3,cv::Scalar(0,0,0),10);
-            cv::circle(frameBtn1,cv::Point(cX[i],cY[i]),20,cv::Scalar(0,0,0),-1);
-            text.clear();
+            text = std::to_string(*begin_ave_s);
+            text = text.substr(0, text.find(".") + 2 + 1);
+            cv::putText(frameBtn1,text,cv::Point(center_x[int(i-int(i/12)*12)], center_y[int(i/12)]),cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0,0,0),10);
+            //cv::circle(frameBtn1,cv::Point(center_x[int(i-int(i/12)*12)], center_y[int(i/12)]),15,cv::Scalar(0,0,0),-1);
         }
-        processedBtn[0] = true;
+
+        i++;
+        begin_ave_s++;
     }
-    updateLabelText(1);
     updateImage(frameBtn1);
+    this->slot_switchToImage();
+    this->updateLabelText(1);
 }
 void MainWindow::slot_processBtn2()
 {
-//    while(this->filename.isEmpty() == true&&this->text_frame.empty()==true){
-//        while(this->filename.isEmpty() == true){
-//            slot_chooseImage();
-//        }
-//    }
+    center_y.clear();
+    center_x.clear();
+    std::vector<int> tt;
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
-    if(!processedBtn[1])
+    ABCDdialog *dialog = new ABCDdialog(this);
+    if(dialog->exec())
     {
-        std::string text;
-        std::vector<qreal> y_green;
-        for(int i=0;i<int(average_green.size());i++)
+        if(dialog->checkBox_A->isChecked())
         {
-            if(average_green[i]<217.4)
-                y_green.push_back(qreal((average_green[i]-217.4079)/(-25.3986)));
-            else
-                y_green.push_back(qreal(i/255*3));
-            text = std::to_string(y_green.back());
-            text = text.substr(0, text.find(".") + 2 + 1);
-            points1.push_back(QPointF(qreal(y_green.back()),qreal(average_green[i])));
-            cv::putText(frameBtn2,text,cv::Point(cX[i]-30,cY[i]),cv::FONT_HERSHEY_SIMPLEX,3,cv::Scalar(0,0,0),10);
+            center_x.push_back(270);
+            tt.push_back(1);
         }
-        processedBtn[1] = true;
+        if(dialog->checkBox_B->isChecked())
+        {
+            center_x.push_back(500);
+            tt.push_back(2);
+        }
+
+        if(dialog->checkBox_C->isChecked())
+        {
+            center_x.push_back(700);
+            tt.push_back(3);
+        }
+
+        if(dialog->checkBox_D->isChecked())
+        {
+            center_x.push_back(950);
+            tt.push_back(4);
+        }
+
+        if(dialog->checkBox_E->isChecked())
+        {
+            center_x.push_back(1150);
+            tt.push_back(5);
+        }
+
+        if(dialog->checkBox_F->isChecked())
+        {
+            center_x.push_back(1400);
+            tt.push_back(6);
+        }
+        if(dialog->checkBox_G->isChecked())
+        {
+            center_x.push_back(1600);
+            tt.push_back(7);
+        }
+        if(dialog->checkBox_H->isChecked())
+        {
+            center_x.push_back(1825);
+            tt.push_back(8);
+        }
+
+        if(center_x.empty())
+            return;
+    }
+    std::vector<qreal> line_ave_s;
+    points1.clear();
+    for(int i = 0;i<int(center_x.size());i++)
+    {
+        for(int j = 0;j<12;j++)
+        {
+            line_ave_s.push_back(average_S[(tt[i]-1)*12+j]);
+        }
+    }
+
+    for(int i=0,j=0;i<int(line_ave_s.size());i++)
+    {
+        qDebug()<<"line_ave_s"<<line_ave_s[i];
+        if(line_ave_s[i]>0.2)
+        {
+            j++;
+            points1.push_back(QPointF(j,line_ave_s[i]));
+        }
     }
     myPlot->slot_updateChart(points1);
-    if(screen()->size().width()>=screen()->size().height())
-        myPlot->resize(screen()->size().width(),screen()->size().height());
-    else
-        myPlot->resize(screen()->size().width(),screen()->size().height()/2.2);
-    myPlot->updateGeometry();
-    updateLabelText(2);
-    updateImage(frameBtn2);
-}
-void MainWindow::slot_processBtn3()
-{
-    if(this->filename.isEmpty() == true&&this->text_frame.empty())
-        return;
-    if(!processedBtn[2])
-    {
-        std::string text;
-        std::vector<qreal> y_green;
-        for(int i=0;i<int(average_green.size());i++)
-        {
-            if(average_green[i]<216)
-                y_green.push_back(qreal((average_green[i]-224)/(-12)));
-            else
-                y_green.push_back(qreal(i/255*4));
-            text = std::to_string(y_green.back());
-            text = text.substr(0, text.find(".") + 2 + 1);
-            points2.push_back(QPointF(qreal(y_green.back()),qreal(average_green[i])));
-            cv::putText(frameBtn3,text,cv::Point(cX[i]-30,cY[i]),cv::FONT_HERSHEY_SIMPLEX,3,cv::Scalar(0,0,0),10);
-        }
-        processedBtn[2] = true;
-    }
-    myPlot->slot_updateChart(points2);
+    this->slot_switchToChart();
     if(screen()->size().width()>=screen()->size().height())
         myPlot->resize(stack->width(),stack->height());
     else
         myPlot->resize(stack->width(),stack->height()/2.2);
     myPlot->updateGeometry();
-    updateLabelText(3);
-    updateImage(frameBtn3);
+    this->updateLabelText(2);
+}
+void MainWindow::slot_processBtn3()
+{
+    if(this->filename.isEmpty() == true&&this->text_frame.empty())
+        return;
+
+
+
+//    myPlot->slot_updateChart(points2);
+//    if(screen()->size().width()>=screen()->size().height())
+//        myPlot->resize(stack->width(),stack->height());
+//    else
+//        myPlot->resize(stack->width(),stack->height()/2.2);
+//    myPlot->updateGeometry();
+//    updateLabelText(3);
+//    updateImage(frameBtn3);
 }
 void MainWindow::slot_processBtn4()
 {
@@ -369,41 +415,42 @@ void MainWindow::slot_processBtn4()
 //    }
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
-    if(!processedBtn[3])
-    {
-        std::string text;
-        std::vector<qreal> y_green;
-        for(int i=0;i<int(average_green.size());i++)
-        {
-            y_green.push_back(qreal((average_red[i]+average_blue[i]+average_blue[i])));
-            text = std::to_string(y_green.back());
-            text = text.substr(0, text.find(".") + 2 + 1);
-            cv::putText(frameBtn4,text,cv::Point(cX[i]-90,cY[i]),cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0,0,0),10);
-        }
-        processedBtn[2] = true;
-    }
-    updateLabelText(4);
-    updateImage(frameBtn4);
+//    if(!processedBtn[3])
+//    {
+//        std::string text;
+//        std::vector<qreal> y_green;
+//        for(int i=0;i<int(average_G.size());i++)
+//        {
+//            y_green.push_back(qreal((average_R[i]+average_B[i]+average_B[i])));
+//            text = std::to_string(y_green.back());
+//            text = text.substr(0, text.find(".") + 2 + 1);
+//            cv::putText(frameBtn4,text,cv::Point(cX[i]-90,cY[i]),cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0,0,0),10);
+//        }
+//        processedBtn[2] = true;
+//    }
+//    updateLabelText(4);
+//    updateImage(frameBtn4);
 
 }
 void MainWindow::paintEvent(QPaintEvent* e)
 {
 
-    myPlot->resize(this->width(),myPlot->height());
-    //this->update();
-    //myImageLabel->resize(this->width(),myImageLabel->height());
-//    myButton->resize(myButton->width(),myButton->height());
-//    this->setLayout(mainLayout);
+//    myPlot->resize(this->width(),myPlot->height());
+    if(screen()->size().width()>=screen()->size().height())
+        myPlot->resize(stack->width(),stack->height());
+    else
+        myPlot->resize(stack->width(),stack->height()/2.2);
+    myPlot->updateGeometry();
 //    QWidget::paintEvent(e);
 }
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
-    if(myPlot->myChartView->scene())
-    {
-        myPlot->myChartView->scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
-        myPlot->myChart->resize(event->size());
-    }
-    updateImage(frameBtn1);
+//    if(myPlot->myChartView->scene())
+//    {
+//        myPlot->myChartView->scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
+//        myPlot->myChart->resize(event->size());
+//    }
+    //updateImage(frameBtn1);
 
 
     updateLabelText(1);

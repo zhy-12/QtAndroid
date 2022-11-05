@@ -50,6 +50,7 @@ LIBS += $$ANDROID_OPENCV/staticlibs/armeabi-v7a/libopencv_calib3d.a \
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    abcddialog.cpp \
     main.cpp \
     mainwindow.cpp \
     plotwidget.cpp \
@@ -57,6 +58,7 @@ SOURCES += \
     scrollareawidget.cpp
 
 HEADERS += \
+    abcddialog.h \
     mainwindow.h \
     plotwidget.h \
     sampledialog.h \
