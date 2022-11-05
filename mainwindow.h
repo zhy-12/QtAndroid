@@ -38,7 +38,7 @@ private:
     void resizeEvent(QResizeEvent*) override;
     void updateLabelText(int x);
     void updateImage(cv::Mat frame);
-    void process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY, int code);
+    void process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY);
 private:
     std::vector<double> center_y;
     std::vector<double> center_x;
@@ -64,6 +64,7 @@ private:
     std::vector<double> average_H;
     std::vector<double> average_S;
     std::vector<double> average_V;
+    std::vector<double> textBuffer;
     cv::Mat text_frame;
     cv::Mat frameBtn1;
     cv::Mat frameBtn2;

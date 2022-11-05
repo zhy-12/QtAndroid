@@ -118,19 +118,11 @@ void MainWindow::updateLabelText(int x)
     }
     this->myLabel->setText(info);
 }
-void MainWindow::process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY, int code )
+void MainWindow::process_Color(cv::Mat frame, std::vector<double> cX, std::vector<double> cY )
 {
-    average_B.clear();
-    average_G.clear();
-    average_R.clear();
-    average_H.clear();
-    average_S.clear();
-    average_V.clear();
-    cv::Mat frame_temp;
-    if(code == cv::COLOR_BGR2HSV)
-        cv::cvtColor(frame, frame_temp, code);
-    else
-        frame_temp = frame;
+
+    cv::Mat frame_temp; 
+    frame.copyTo(frame_temp);
     cv::Mat cut_frame;
     cv::Scalar tempVal;
     for(int i=0;i<int(cX.size());i++)
@@ -140,6 +132,19 @@ void MainWindow::process_Color(cv::Mat frame, std::vector<double> cX, std::vecto
             qDebug()<<"point:"<<cX[i]-2<<","<<cY[j]-2;
             cut_frame = frame_temp(cv::Rect(cX[i]-2,cY[j]-2,4,4));
             tempVal = cv::mean(cut_frame);
+            average_B.push_back(tempVal[0]);
+            average_G.push_back(tempVal[1]);
+            average_R.push_back(tempVal[2]);
+        }
+    }
+    cv::cvtColor(frame_temp, frame_temp, cv::COLOR_BGR2HSV);
+    for(int i=0;i<int(cX.size());i++)
+    {
+        for(int j=0;j<int(cY.size());j++)
+        {
+            cut_frame = frame_temp(cv::Rect(cX[i]-2,cY[j]-2,4,4));
+            tempVal = cv::mean(cut_frame);
+
             average_H.push_back(tempVal[0]);
             average_S.push_back(tempVal[1]);
             average_V.push_back(tempVal[2]);
@@ -164,6 +169,12 @@ void MainWindow::slot_chooseImage()
         processedBtn[1]=false;
         processedBtn[2]=false;
         processedBtn[3]=false;
+        average_B.clear();
+        average_G.clear();
+        average_R.clear();
+        average_H.clear();
+        average_S.clear();
+        average_V.clear();
     }
     cX.clear();
     cY.clear();
@@ -232,18 +243,23 @@ void MainWindow::slot_chooseImage()
     text_frame.copyTo(frameBtn2);
     text_frame.copyTo(frameBtn3);
     text_frame.copyTo(frameBtn4);
-    process_Color(text_frame, center_x, center_y,0);
-    process_Color(text_frame, center_x, center_y, cv::COLOR_BGR2HSV);
+    process_Color(text_frame, center_x, center_y );
 
     auto begin_ave_s = average_S.begin();
     auto end_ave_s = average_S.end();
+    auto begin_ave_G = average_G.begin();
+    qDebug()<<"average_S:"<<average_S;
+    qDebug()<<"average_G:"<<average_G;
+    textBuffer.clear();
     while(begin_ave_s!=end_ave_s)
     {
-        if((*begin_ave_s+22.1059)/286.3640 < 0.95)
-            *begin_ave_s = double((*begin_ave_s + 22.1059)/286.3640);
-        else
-            *begin_ave_s = double((*begin_ave_s - 219.7655)/(-28.0058));
+
+        //if((*begin_ave_s+22.1059)/286.3640 < 0.95)
+        //    textBuffer.push_back(double((*begin_ave_s + 22.1059)/286.3640));
+        //else
+            textBuffer.push_back(double((*begin_ave_G - 219.7655)/(-28.0058)));
         begin_ave_s++;
+        begin_ave_G++;
     }
 
     updateImage(text_frame);
@@ -281,24 +297,22 @@ void MainWindow::slot_processBtn1()
         return;
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
-    auto begin_ave_s = average_S.begin();
-    auto end_ave_s = average_S.end();
-
+    auto begin_text = textBuffer.begin();
+    auto end_text = textBuffer.end();
     std::string text;
     int i = 0;
-    while(begin_ave_s!=end_ave_s)
+    while(begin_text!=end_text)
     {
-        qDebug()<<"average_S"<< *begin_ave_s;
-        if(*begin_ave_s>-1)
+        if(*begin_text>0.2)
         {
-            text = std::to_string(*begin_ave_s);
+            text = std::to_string(*begin_text);
             text = text.substr(0, text.find(".") + 2 + 1);
             cv::putText(frameBtn1,text,cv::Point(center_x[int(i-int(i/12)*12)], center_y[int(i/12)]),cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0,0,0),10);
-            //cv::circle(frameBtn1,cv::Point(center_x[int(i-int(i/12)*12)], center_y[int(i/12)]),15,cv::Scalar(0,0,0),-1);
+            cv::circle(frameBtn1,cv::Point(center_x[int(i-int(i/12)*12)], center_y[int(i/12)]),15,cv::Scalar(0,0,0),-1);
         }
 
         i++;
-        begin_ave_s++;
+        begin_text++;
     }
     updateImage(frameBtn1);
     this->slot_switchToImage();
@@ -372,13 +386,13 @@ void MainWindow::slot_processBtn2()
         }
     }
 
-    for(int i=0,j=0;i<int(line_ave_s.size());i++)
+    for(int i=0,j=0;i<int(textBuffer.size());i++)
     {
-        qDebug()<<"line_ave_s"<<line_ave_s[i];
-        if(line_ave_s[i]>0.2)
+
+        if(textBuffer[i]>0.2)
         {
             j++;
-            points1.push_back(QPointF(j,line_ave_s[i]));
+            points1.push_back(QPointF(j,textBuffer[i]));
         }
     }
     myPlot->slot_updateChart(points1);

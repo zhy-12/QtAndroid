@@ -59,7 +59,7 @@ void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickC
     axis_X->setMinorGridLineVisible(false);
 
     axis_Y->setRange(this->min_Y,this->max_Y);
-    axis_Y->setLabelFormat("%u");//%u:无符号十进制数
+    axis_Y->setLabelFormat("%.3f");//%u:无符号十进制数
     axis_Y->setGridLineVisible(false);
     axis_Y->setMinorTickCount(1);
     axis_Y->setTickCount(tickCount_Y);
@@ -113,6 +113,7 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
     test1(points,0,points.size());
     axis_X->setMax(points.back().x()*1.2);
     axis_X->setMin((points.front().x()/1.2/axis_X->max())>0.4?points.front().x()/1.2:0);
+    axis_Y->setMax(points.back().y()*1.2);
     std::vector<QPointF> pointsFit = calculate(points);
     myLineSeries->clear();
     myScatters->clear();
