@@ -5,7 +5,7 @@
 #include <QtCharts/QValueAxis>
 #include <QGraphicsSimpleTextItem>
 
-void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
+void test1(std::vector<QPointF> &vector, int hi);//冒泡排序
 plotWidget::plotWidget(QWidget *parent, QString chartName)
     : QWidget{parent}
     , myChart(new QChart)
@@ -110,7 +110,8 @@ void plotWidget::initChart()
 }
 void plotWidget::slot_updateChart(std::vector<QPointF> points)
 {
-    test1(points,0,points.size());
+    test1(points,int(points.size()));
+    qDebug()<<points;
     axis_X->setMax(points.back().x()*1.2);
     axis_X->setMin((points.front().x()/1.2/axis_X->max())>0.4?points.front().x()/1.2:0);
     axis_Y->setMax(points.back().y()*1.2);
@@ -128,6 +129,7 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
         sprintf(charCode,"%.2f",Intercept);
         str.append(QString(charCode));
         text->setText(str);
+        qDebug()<<"plot:"<<str;
         text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.94)));
         delete[] charCode;
     }
@@ -170,24 +172,24 @@ std::vector<QPointF> plotWidget::calculate(std::vector<QPointF> points )
 
 }
 
-void plotWidget::paintEvent(QPaintEvent* e)
+void plotWidget::paintEvent(QPaintEvent* )
 {
     //this->resize()
 }
 
 
-void test1(std::vector<QPointF> &vector,int lo,int hi)//冒泡排序
+void test1(std::vector<QPointF> &vector, int hi)//冒泡排序
 {
-    QPointF A;
+    qreal A;
     for (int i = 0; i < hi; i++)
     {
-        for (int j = 0; j < hi - i - 1; j++)
+        for (int j = 0; j < hi - i-1 ; j++)
         {
-            if (vector[j].x() > vector[j + 1].x())
+            if (vector[j].y() > vector[j + 1].y())
             {
-                A = vector[j];
-                vector[j] = vector[j + 1];
-                vector[j + 1] = A;
+                A = vector[j].y();
+                vector[j].ry() = vector[j + 1].ry();
+                vector[j + 1].ry() = A;
             }
         }
     }
