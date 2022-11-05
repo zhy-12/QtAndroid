@@ -118,6 +118,9 @@ void MainWindow::updateLabelText(int x)
 }
 void MainWindow::slot_chooseImage()
 {
+    int center_y[] = {320, 550, 770, 990, 1220, 1450, 1680, 1900,\
+                    2125, 2350, 2570, 2800};
+    int center_x[] = {270, 500, 700, 950, 1150, 1400, 1600, 1825};
     sampleDialog* dialog = new sampleDialog();
     if(dialog->exec())
     {
