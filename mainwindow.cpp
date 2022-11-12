@@ -12,7 +12,7 @@
 #include "abcddialog.h"
 void printVector(std::vector<QPointF> vector);
 void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
-
+int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area);
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
@@ -34,9 +34,9 @@ MainWindow::MainWindow(QWidget *parent)
     QFont ft;
     ft.setPointSize(10);
     myLabel->setFont(ft);
-    updateLabelText(1);
+    updateLabelText(1,"");
     myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    myPlot->setAixs("concentration",0,1,8,"RGB",0,300,6);
+    myPlot->setAixs("reagent count",0,1,8,"concentration ",0,300,6);
     myPlot->initChart();
     myPlot->hide();
 //    myPlot->set
@@ -57,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addWidget(myButton1);
     buttonLayout->addWidget(myButton2);
     mainLayout->addWidget(myLabel);
+//    myLabel->hide();
     mainLayout->addLayout(stackBtnLayout);
     mainLayout->addWidget(stack);
     mainLayout->addLayout(buttonLayout);
@@ -83,10 +84,11 @@ void MainWindow::slot_switchToChart()
     myImageLabel->hide();
     this->stack->setCurrentIndex(index2);
 }
-void MainWindow::updateLabelText(int x)
+void MainWindow::updateLabelText(int x,QString str)
 {
-    //QRect m_Rect = QGuiApplication::primaryScreen()->geometry();
-    QSize size = this->stack->size();
+    QRect m_Rect = QGuiApplication::primaryScreen()->geometry();
+    QSize size = m_Rect.size();
+    //QSize size = this->stack->size();
     QString info;
     info.append("width:");
     info.append(QString::number(size.width()));
@@ -104,6 +106,8 @@ void MainWindow::updateLabelText(int x)
     default:
         break;
     }
+    info.append(" ");
+    info.append(str);
     this->myLabel->setText(info);
 }
 void MainWindow::process_Color(cv::Mat frame, std::vector<std::vector<cv::Point2f>> center )
@@ -242,7 +246,7 @@ void MainWindow::slot_chooseImage()
     }
     frame = frame(cv::Rect(y_top,x_top,y_bottom-y_top,x_bottom-x_top));
     qDebug()<<"frame3:"<<frame.cols<<" "<<frame.rows;
-    text_frame = frame;
+    frame.copyTo(text_frame);
     text_frame.copyTo(frameBtn1);
     text_frame.copyTo(frameBtn2);
     process_Color(text_frame, center);
@@ -251,18 +255,34 @@ void MainWindow::slot_chooseImage()
     qDebug()<<"average_S:"<<average_S;
     qDebug()<<"average_G:"<<average_G;
     textBuffer.clear();
-    std::vector<double> temp_text;
+    textH2O2.clear();
+    textGlucose.clear();
+    double temp;
+    std::vector<double> temp_H2O2;
+    std::vector<double> temp_Glucose;
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
         {
             if((average_S[i][j]+22.1059)/286.3640 < 0.95)
-                temp_text.push_back(double((average_S[i][j] + 22.1059)/286.3640));
+            {
+                temp = double((average_S[i][j] + 22.1059)/286.3640);
+                temp_H2O2.push_back(0.1688 * temp - 0.0347);
+                temp_Glucose.push_back(1.4914 * temp - 0.4627);
+            }
+
             else
-                temp_text.push_back(double((average_G[i][j] - 219.7655)/(-28.0058)));
+            {
+                temp = double((average_G[i][j] - 219.7655)/(-28.0058));
+                temp_H2O2.push_back(0.1688 * temp - 0.0347);
+                temp_Glucose.push_back(1.4914 * temp - 0.4627);
+            }
         }
-        textBuffer.push_back(temp_text);
-        temp_text.clear();
+        qDebug()<<"temp_H2O2:"<<temp_H2O2;
+        textH2O2.push_back(temp_H2O2);
+        textGlucose.push_back(temp_Glucose);
+        temp_H2O2.clear();
+        temp_Glucose.clear();
     }
     updateImage(text_frame);
     this->myPlot->myLineSeries->clear();
@@ -275,7 +295,7 @@ void MainWindow::updateImage(cv::Mat frame)
         this->myImageLabel->hide();
         QImage img((const uchar*)(frame.data),frame.cols,frame.rows,frame.step,QImage::Format_RGB888);
         QPixmap pixImage = QPixmap::fromImage(img.rgbSwapped());
-        pixImage = pixImage.scaled(this->stack->size(),Qt::KeepAspectRatio);
+        pixImage = pixImage.scaled(this->stack->size(),Qt::KeepAspectRatio, Qt::SmoothTransformation);
         myImageLabel->resize(pixImage.size());
         myImageLabel->setPixmap(pixImage);
         myImageLabel->show();
@@ -291,27 +311,50 @@ void MainWindow::slot_processBtn1()
     {
         m_sampleType = dialog->m_sampleType;
     }
-    if(m_sampleType==sampleType_non)
+    switch (m_sampleType) {
+    case sampleType_h202:
+        textBuffer = textH2O2;
+        updateLabelText(1,"H2O2");
+        break;
+    case sampleType_glucose:
+        textBuffer = textGlucose;
+        updateLabelText(1,"Glucose");
+        break;
+    case sampleType_non:
         return;
+    default:
+        break;
+    }
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
     std::string text;
+    cv::Mat temp_frame;
+    frameBtn1.copyTo(temp_frame);
+
+//    cv::resize(frameBtn1,temp_frame,temp_size,0,0,cv::INTER_CUBIC);
+    cv::resize(temp_frame,temp_frame,cv::Size(temp_frame.size().width/8,temp_frame.size().height/8),0,0,cv::INTER_CUBIC);
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
         {
-            if(textBuffer[i][j]>0.2)
+            if(textBuffer[i][j]>0.0)
             {
                 text = std::to_string(textBuffer[i][j]);
                 text = text.substr(0, text.find(".") + 2 + 1);
-                cv::putText(frameBtn1,text,center[i][j],cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0,0,0),10);
-                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
+                int baseline;
+                cv::Point temp_point;
+                int thickness = 1;
+                double font_scale = 0.38;
+                cv::Size text_Size = cv::getTextSize(text,cv::FONT_HERSHEY_SIMPLEX,font_scale,thickness,&baseline);
+                temp_point.x = center[i][j].x/8 - text_Size.width/2*0.8;
+                temp_point.y = center[i][j].y/8 + text_Size.height/2;
+                cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
+//                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
             }
         }
     }
-    updateImage(frameBtn1);
+    updateImage(temp_frame);
     this->slot_switchToImage();
-    this->updateLabelText(1);
 }
 void MainWindow::slot_processBtn2()
 {
@@ -393,31 +436,27 @@ void MainWindow::slot_processBtn2()
     else
         myPlot->resize(stack->width(),stack->height()/2.2);
     myPlot->updateGeometry();
-    this->updateLabelText(2);
+    this->updateLabelText(2,"");
 }
 
-void MainWindow::paintEvent(QPaintEvent* )
+void MainWindow::paintEvent(QPaintEvent* e)
 {
-
-//    myPlot->resize(this->width(),myPlot->height());
     if(screen()->size().width()>=screen()->size().height())
+    {
         myPlot->resize(stack->width(),stack->height());
+        this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
+    }
     else
+    {
         myPlot->resize(stack->width(),stack->height()/2.2);
+        this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
+    }
     myPlot->updateGeometry();
-//    QWidget::paintEvent(e);
+
+    QWidget::paintEvent(e);
 }
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
-//    if(myPlot->myChartView->scene())
-//    {
-//        myPlot->myChartView->scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
-//        myPlot->myChart->resize(event->size());
-//    }
-    //updateImage(frameBtn1);
-
-
-    updateLabelText(1);
     QWidget::resizeEvent(event);
 }
 //bool request_Android_Permission(const QString &str_permission)
@@ -450,3 +489,60 @@ void printVector(std::vector<QPointF> vector)
 
 }
 
+
+int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area)
+{
+    int w = src.cols;
+    int h = src.rows;
+    int dst_w = dst_size.width;
+    int dst_h = dst_size.height;
+    qDebug() << "src: (" << h << ", " << w << ")" ;
+    dst = cv::Mat(cv::Size(dst_w, dst_h), CV_8UC3, cv::Scalar(0));
+
+    float ratio_src = w*1.0 / h;
+    float ratio_dst = dst_w*1.0 / dst_h;
+
+    int tmp_w=0;
+    int tmp_h=0;
+    if (ratio_src > ratio_dst) {
+        tmp_w = dst_w;
+        tmp_h = floor((dst_w*1.0 / w) * h);
+    } else if (ratio_src < ratio_dst){
+        tmp_h = dst_h;
+        tmp_w = floor((dst_h*1.0 / h) * w);
+    } else {
+        resize(src, dst, dst_size);
+        effect_area.x = 0;
+        effect_area.y = 0;
+        effect_area.width = dst_w;
+        effect_area.height = dst_h;
+        return 0;
+    }
+
+    qDebug() << "tmp: (" << tmp_h << ", " << tmp_w << ")";
+    cv::Mat tmp;
+    resize(src, tmp, cv::Size(tmp_w, tmp_h));
+
+    if (tmp_w != dst_w) { //高对齐，宽没对齐
+        int index_w = floor((dst_w - tmp_w) / 2.0);
+        qDebug() << "index_w: " << index_w ;
+        for (int i=0; i<dst_h; i++) {
+            memcpy(dst.data+i*dst_w*3 + index_w*3, tmp.data+i*tmp_w*3, tmp_w*3);
+        }
+        effect_area.x = index_w;
+        effect_area.y = 0;
+        effect_area.width = tmp_w;
+        effect_area.height = tmp_h;
+    } else if (tmp_h != dst_h) { //宽对齐， 高没有对齐
+        int index_h = floor((dst_h - tmp_h) / 2.0);
+        qDebug() << "index_h: " << index_h ;
+        memcpy(dst.data+index_h*dst_w*3, tmp.data, tmp_w*tmp_h*3);
+        effect_area.x = 0;
+        effect_area.y = index_h;
+        effect_area.width = tmp_w;
+        effect_area.height = tmp_h;
+    } else {
+        printf("error\n");
+    }
+    return 0;
+}

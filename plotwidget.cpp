@@ -50,7 +50,7 @@ void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickC
     pen.setWidth(2);
     labelsFont.setPixelSize(12);
     axis_X->setRange(this->min_X,this->max_X);
-    axis_X->setLabelFormat("%.3f");//%u:无符号十进制数
+    axis_X->setLabelFormat("%d");//%u:无符号十进制数
     axis_X->setGridLineVisible(false);
     axis_X->setTickCount(tickCount_X);
     axis_X->setTitleText(axisName_X);
@@ -74,6 +74,7 @@ void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickC
 
     QFont font;
     font.setPixelSize(12);
+    font.setBold(false);
     text->setFont(font);
     text->setPen(QPen(QColor(0,0,0)));
 }
@@ -112,8 +113,9 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
 {
     test1(points,int(points.size()));
     qDebug()<<points;
-    axis_X->setMax(points.back().x()*1.2);
+    axis_X->setMax(int(points.back().x())+1);
     axis_X->setMin((points.front().x()/1.2/axis_X->max())>0.4?points.front().x()/1.2:0);
+    axis_X->setTickCount(axis_X->max()+1);
     axis_Y->setMax(points.back().y()*1.2);
     std::vector<QPointF> pointsFit = calculate(points);
     myLineSeries->clear();
@@ -128,9 +130,14 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
         str.append("x+");
         sprintf(charCode,"%.2f",Intercept);
         str.append(QString(charCode));
+        str.append(" R²=");
+        sprintf(charCode,"%.2f",R2);
+        str.append(QString(charCode));
+
+
         text->setText(str);
         qDebug()<<"plot:"<<str;
-        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.94)));
+        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.95)));
         delete[] charCode;
     }
 
@@ -161,9 +168,17 @@ std::vector<QPointF> plotWidget::calculate(std::vector<QPointF> points )
         fYY += (points[i].y() - fYA)*(points[i].y() - fYA);
     }
     slop = fXY / fXX;
+
     Intercept = fYA - ((slop) * fXA);
     buff.clear();
     //y = slop*x+intercept
+    double SSR = 0 ,SST = 0;
+    for(int i =0;i<LEN_MAX;i++)
+    {
+        SSR += (slop*points[i].x()+Intercept-fYA)*(slop*points[i].x()+Intercept-fYA);
+        SST += (points[i].y()-fYA)*(points[i].y()-fYA);
+    }
+    R2 = SSR/SST;
     for(int i = 0;i < LEN_MAX;i++)
     {
        buff.push_back(QPointF(points[i].x() ,points[i].x()*slop+Intercept));

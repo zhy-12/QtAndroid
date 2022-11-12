@@ -14,6 +14,12 @@
 #include <sampledialog.h>
 
 #define assertRectValid(x,y,w,h,imageW,ImageH) ((((x>=0)&&(w>=0)&&(x+w<imageW)&&(y>=0)&&(h>=0)&&(y+h<imageW))>0)?true:false)
+struct object_rect {
+    int x;
+    int y;
+    int width;
+    int height;
+};
 class MainWindow : public QWidget
 {
     Q_OBJECT
@@ -34,7 +40,7 @@ public slots:
 private:
     void paintEvent(QPaintEvent*) override;
     void resizeEvent(QResizeEvent*) override;
-    void updateLabelText(int x);
+    void updateLabelText(int x, QString str);
     void updateImage(cv::Mat frame);
     void process_Color(cv::Mat frame, std::vector<std::vector<cv::Point2f>>);
 private:
@@ -59,6 +65,8 @@ private:
     std::vector<std::vector<double>> average_S;
     std::vector<std::vector<double>> average_V;
     std::vector<std::vector<double>> textBuffer;
+    std::vector<std::vector<double>> textH2O2;
+    std::vector<std::vector<double>> textGlucose;
     cv::Mat text_frame;
     cv::Mat frameBtn1;
     cv::Mat frameBtn2;
