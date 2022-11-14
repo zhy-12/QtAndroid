@@ -137,7 +137,7 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
 
         text->setText(str);
         qDebug()<<"plot:"<<str;
-        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.95)));
+        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.65,this->axis_Y->max()*0.95)));
         delete[] charCode;
     }
 

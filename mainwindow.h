@@ -7,6 +7,7 @@
 #include <QWidget>
 #include <QVBoxLayout>
 #include "plotwidget.h"
+#include "imagelabel.h"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -47,7 +48,7 @@ private:
     std::vector<std::vector<cv::Point2f>> center;
     QStackedWidget *stack;
     QLabel* myLabel;
-    QLabel* myImageLabel;
+    imageLabel* myImageLabel;
     QPushButton* myButton1;
     QPushButton* myButton2;
     QPushButton* chooseImageButton;

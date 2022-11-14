@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
     , stack(new QStackedWidget(this))
     , myLabel(new QLabel(this))
-    , myImageLabel(new QLabel(this))
+    , myImageLabel(new imageLabel(this))
     , myButton1(new QPushButton("reagent",this))
     , myButton2(new QPushButton("linear",this))
     , chooseImageButton(new QPushButton("Select",this))
@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     ft.setPointSize(10);
     myLabel->setFont(ft);
     updateLabelText(1,"");
-    myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+//    myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
     myPlot->setAixs("reagent count",0,1,8,"concentration ",0,300,6);
     myPlot->initChart();
     myPlot->hide();
@@ -59,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addWidget(myLabel);
 //    myLabel->hide();
     mainLayout->addLayout(stackBtnLayout);
+    //myImageLabel->setAlignment(Qt::AlignHCenter);
     mainLayout->addWidget(stack);
     mainLayout->addLayout(buttonLayout);
     this->setLayout(mainLayout);
@@ -188,8 +189,6 @@ void MainWindow::slot_chooseImage()
     cX.clear();
     cY.clear();
     points1.clear();
-//    myPlot->initChart();
-//    myImageLabel->clear();
     myPlot->text->setText(" ");
     qDebug()<<"path:"<<filename[0];
     cv::Mat imgage_hsv;
@@ -294,10 +293,11 @@ void MainWindow::updateImage(cv::Mat frame)
     {
         this->myImageLabel->hide();
         QImage img((const uchar*)(frame.data),frame.cols,frame.rows,frame.step,QImage::Format_RGB888);
-        QPixmap pixImage = QPixmap::fromImage(img.rgbSwapped());
-        pixImage = pixImage.scaled(this->stack->size(),Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        myImageLabel->resize(pixImage.size());
-        myImageLabel->setPixmap(pixImage);
+        myImageLabel->setImage(img.rgbSwapped());
+//        QPixmap pixImage = QPixmap::fromImage(img.rgbSwapped());
+//        pixImage = pixImage.scaled(this->stack->size(),Qt::KeepAspectRatio, Qt::SmoothTransformation);
+//        myImageLabel->resize(pixImage.size());
+//        myImageLabel->setPixmap(pixImage);
         myImageLabel->show();
         update();
     }
@@ -332,7 +332,7 @@ void MainWindow::slot_processBtn1()
     frameBtn1.copyTo(temp_frame);
 
 //    cv::resize(frameBtn1,temp_frame,temp_size,0,0,cv::INTER_CUBIC);
-    cv::resize(temp_frame,temp_frame,cv::Size(temp_frame.size().width/8,temp_frame.size().height/8),0,0,cv::INTER_CUBIC);
+//    cv::resize(temp_frame,temp_frame,cv::Size(temp_frame.size().width/8,temp_frame.size().height/8),0,0,cv::INTER_CUBIC);
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
@@ -343,11 +343,11 @@ void MainWindow::slot_processBtn1()
                 text = text.substr(0, text.find(".") + 2 + 1);
                 int baseline;
                 cv::Point temp_point;
-                int thickness = 1;
-                double font_scale = 0.38;
+                int thickness = 8;
+                double font_scale = 2.8;
                 cv::Size text_Size = cv::getTextSize(text,cv::FONT_HERSHEY_SIMPLEX,font_scale,thickness,&baseline);
-                temp_point.x = center[i][j].x/8 - text_Size.width/2*0.8;
-                temp_point.y = center[i][j].y/8 + text_Size.height/2;
+                temp_point.x = center[i][j].x - text_Size.width/2*0.8;
+                temp_point.y = center[i][j].y + text_Size.height/2;
                 cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
 //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
             }
