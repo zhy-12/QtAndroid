@@ -21,7 +21,8 @@ public:
     void initChart();
     void paintEvent(QPaintEvent* ) override;
     std::vector<QPointF> calculate(std::vector<QPointF> points);
-//    void resizeEvent(QResizeEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void clear();
 
 public:
     QChart *myChart;

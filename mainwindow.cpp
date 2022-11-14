@@ -10,6 +10,13 @@
 #include <QTransform>
 #include "sampledialog.h"
 #include "abcddialog.h"
+#include <QMessageBox>
+#include <QStringList>
+#include <QHeaderView>
+#include <QScroller>
+#include <QListWidget>
+#include <QScrollBar>
+#include <QTableWidgetItem>
 void printVector(std::vector<QPointF> vector);
 void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
 int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area);
@@ -24,8 +31,11 @@ MainWindow::MainWindow(QWidget *parent)
     , chooseImageButton(new QPushButton("Select",this))
     , btn_stackToImage(new QPushButton("Image",this))
     , btn_stackToChart(new QPushButton("Chart",this))
+    , btn_stackToTable(new QPushButton("Table",this))
     , myPlot(new plotWidget(this,"chart"))
+    , myTable(new QTableWidget(8,12,this))
 {
+    setStyleSheet("Qwidget{background-color:white;}");
     m_sampleType = sampleType_non;
 
     myLabel->setAlignment(Qt::AlignCenter);
@@ -36,13 +46,16 @@ MainWindow::MainWindow(QWidget *parent)
     myLabel->setFont(ft);
     updateLabelText(1,"");
 //    myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    myPlot->setAixs("reagent count",0,1,8,"concentration ",0,300,6);
+    myPlot->setAixs("position",0,12,13,"concentration ",0,300,6);
     myPlot->initChart();
     myPlot->hide();
 //    myPlot->set
+    initDataTable();
     index1 = stack->addWidget(myImageLabel);
     index2 = stack->addWidget(myPlot);
+    index3 = stack->addWidget(myTable);
     stack->setCurrentWidget(myImageLabel);
+//    stack->setStyleSheet("QStackedWidget{background-color:white;}")
     //stack->setContentsMargins(0,0,0,0);
 
     chooseImageButton->setObjectName("chooseImage");
@@ -52,30 +65,34 @@ MainWindow::MainWindow(QWidget *parent)
     QHBoxLayout* stackBtnLayout = new QHBoxLayout();
     stackBtnLayout->addWidget(btn_stackToImage);
     stackBtnLayout->addWidget(btn_stackToChart);
+    stackBtnLayout->addWidget(btn_stackToTable);
 
     buttonLayout->addWidget(chooseImageButton);
     buttonLayout->addWidget(myButton1);
     buttonLayout->addWidget(myButton2);
-    mainLayout->addWidget(myLabel);
-//    myLabel->hide();
+    buttonLayout->setAlignment(Qt::AlignBottom);
+//    mainLayout->addWidget(myLabel);
+    myLabel->hide();
     mainLayout->addLayout(stackBtnLayout);
     //myImageLabel->setAlignment(Qt::AlignHCenter);
     mainLayout->addWidget(stack);
     mainLayout->addLayout(buttonLayout);
     this->setLayout(mainLayout);
-    this->showFullScreen();
-    this->setFixedSize(this->screen()->size());
+    //this->showFullScreen();
+    //this->setFixedSize(this->screen()->size());
     myButton1->connect(myButton1, SIGNAL(pressed()),this,SLOT(slot_processBtn1()));
     myButton2->connect(myButton2, SIGNAL(pressed()),this,SLOT(slot_processBtn2()));
     chooseImageButton->connect(chooseImageButton,SIGNAL(pressed()),this,SLOT(slot_chooseImage()));
     btn_stackToImage->connect(btn_stackToImage,SIGNAL(clicked()),this,SLOT(slot_switchToImage()));
     btn_stackToChart->connect(btn_stackToChart,SIGNAL(clicked()),this,SLOT(slot_switchToChart()));
+    btn_stackToTable->connect(btn_stackToTable,SIGNAL(clicked()),this,SLOT(slot_switchToTable()));
 }
 
 MainWindow::~MainWindow(){}
 void MainWindow::slot_switchToImage()
 {
     myPlot->hide();
+    myTable->hide();
     myImageLabel->show();
     this->stack->setCurrentIndex(index1);
 }
@@ -83,7 +100,15 @@ void MainWindow::slot_switchToChart()
 {
     myPlot->show();
     myImageLabel->hide();
+    myTable->hide();
     this->stack->setCurrentIndex(index2);
+}
+void MainWindow::slot_switchToTable()
+{
+    myTable->show();
+    myPlot->hide();
+    myImageLabel->hide();
+    this->stack->setCurrentIndex(index3);
 }
 void MainWindow::updateLabelText(int x,QString str)
 {
@@ -266,15 +291,15 @@ void MainWindow::slot_chooseImage()
             if((average_S[i][j]+22.1059)/286.3640 < 0.95)
             {
                 temp = double((average_S[i][j] + 22.1059)/286.3640);
-                temp_H2O2.push_back(0.1688 * temp - 0.0347);
-                temp_Glucose.push_back(1.4914 * temp - 0.4627);
+                temp_H2O2.push_back(temp);
+                temp_Glucose.push_back(temp);
             }
 
             else
             {
                 temp = double((average_G[i][j] - 219.7655)/(-28.0058));
-                temp_H2O2.push_back(0.1688 * temp - 0.0347);
-                temp_Glucose.push_back(1.4914 * temp - 0.4627);
+                temp_H2O2.push_back(temp);
+                temp_Glucose.push_back(temp);
             }
         }
         qDebug()<<"temp_H2O2:"<<temp_H2O2;
@@ -306,11 +331,12 @@ void MainWindow::updateImage(cv::Mat frame)
 
 void MainWindow::slot_processBtn1()
 {
-    sampleDialog* dialog = new sampleDialog();
-    if(dialog->exec())
-    {
-        m_sampleType = dialog->m_sampleType;
-    }
+//    sampleDialog* dialog = new sampleDialog();
+//    if(dialog->exec())
+//    {
+//        m_sampleType = dialog->m_sampleType;
+//    }
+    m_sampleType = sampleType_h202;
     switch (m_sampleType) {
     case sampleType_h202:
         textBuffer = textH2O2;
@@ -333,12 +359,16 @@ void MainWindow::slot_processBtn1()
 
 //    cv::resize(frameBtn1,temp_frame,temp_size,0,0,cv::INTER_CUBIC);
 //    cv::resize(temp_frame,temp_frame,cv::Size(temp_frame.size().width/8,temp_frame.size().height/8),0,0,cv::INTER_CUBIC);
+    mask.clear();
+    std::vector<bool> mask_lineTemp;
+
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
         {
-            if(textBuffer[i][j]>0.0)
+            if(textBuffer[i][j]>0.2)
             {
+                mask_lineTemp.push_back(1);
                 text = std::to_string(textBuffer[i][j]);
                 text = text.substr(0, text.find(".") + 2 + 1);
                 int baseline;
@@ -350,8 +380,19 @@ void MainWindow::slot_processBtn1()
                 temp_point.y = center[i][j].y + text_Size.height/2;
                 cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
 //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
+                QTableWidgetItem *item = new QTableWidgetItem;
+                item->setBackground(QBrush(QColor(0,0,0)));
+                item->setText(QString::number(int(average_G[i][j])));
+                myTable->setItem(i,j,item);
+            }
+            else
+            {
+                mask_lineTemp.push_back(0);
+//                myTable->setItem(i,j,item);
             }
         }
+        mask.push_back(mask_lineTemp);
+        mask_lineTemp.clear();
     }
     updateImage(temp_frame);
     this->slot_switchToImage();
@@ -415,48 +456,92 @@ void MainWindow::slot_processBtn2()
     }
     std::vector<std::vector<double>> line_ave_s;
     points1.clear();
-    for(int i=0,k=0;i<int(tt.size());i++)
+    textBuffer = average_G;
+    if(tt.size()>1||tt.size()==0)
     {
+        QMessageBox::warning(this,"WARNING","Select one line",QMessageBox::Close);
+        return;
+    }
+//    for(int i=0,k=0;i<int(tt.size());i++)
+//    {
         for(int j=0;j<12;j++)
         {
-            if(textBuffer[tt[i]-1][j]>0.2)
+            if(mask[tt.back()-1][j]==true)
             {
-                k++;
-                points1.push_back(QPointF(k,textBuffer[tt[i]-1][j]));
+//                k++;
+
+                points1.push_back(QPointF(j+1,textBuffer[tt.back()-1][j]));
                 qDebug()<<points1.back();
             }
         }
-    }
+//    }
     if(!points1.empty())
         myPlot->slot_updateChart(points1);
+    else
+        myPlot->clear();
 
     this->slot_switchToChart();
-    if(screen()->size().width()>=screen()->size().height())
-        myPlot->resize(stack->width(),stack->height());
-    else
-        myPlot->resize(stack->width(),stack->height()/2.2);
-    myPlot->updateGeometry();
+//    if(screen()->size().width()>=screen()->size().height())
+//        myPlot->resize(stack->width(),stack->height());
+//    else
+//        myPlot->resize(stack->width(),stack->height()/2.2);
+//    myPlot->updateGeometry();
     this->updateLabelText(2,"");
 }
+void MainWindow::initDataTable()
+{
+    QFont font;
+    QString qssTV = "QTableWidget::item:hover{background-color:rgb(92,188,227,200)}"
+                        "QTableWidget::item:selected{background-color:#1B89A1}"
+                        "QHeaderView::section,QTableCornerButton:section{ \
+                padding:3px; margin:0px; color:#DCDCDC;  border:1px solid #242424; \
+        border-left-width:0px; border-right-width:1px; border-top-width:0px; border-bottom-width:1px; \
+    background:qlineargradient(spread:pad,x1:0,y1:0,x2:0,y2:1,stop:0 #646464,stop:1 #525252); }"
+    "QTableWidget{background-color:white;border:none;}";
 
+    myTable->setStyleSheet(qssTV);
+    myTable->setFont(QFont("song", 12, QFont::Bold));
+    myTable->setHorizontalHeaderLabels(QStringList()<<"1"<<"2"<<"3"<<"4"<<"5"<<"6"<<"7"<<"8"<<"9"<<"10"<<"11"<<"12");
+    myTable->setVerticalHeaderLabels(QStringList()<<"A"<<"B"<<"C"<<"D"<<"E"<<"F"<<"G"<<"H");
+    myTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    myTable->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    QScroller *pScroller = QScroller::scroller(myTable);
+    pScroller->grabGesture(myTable,QScroller::LeftMouseButtonGesture);
+    myTable->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    myTable->horizontalScrollBar()->hide();
+    myTable->verticalScrollBar()->hide();
+    myTable->resizeRowsToContents();
+    myTable->resizeColumnsToContents();
+}
 void MainWindow::paintEvent(QPaintEvent* e)
 {
-    if(screen()->size().width()>=screen()->size().height())
-    {
-        myPlot->resize(stack->width(),stack->height());
-        this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
-    }
-    else
-    {
-        myPlot->resize(stack->width(),stack->height()/2.2);
-        this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
-    }
-    myPlot->updateGeometry();
+    myTable->resizeRowsToContents();
+//    if(screen()->size().width()>=screen()->size().height())
+//    {
+//        myPlot->resize(stack->width(),stack->height());
+//        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
+//    }
+//    else
+//    {
+//        myPlot->resize(stack->width(),stack->height()/2.2);
+//        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
+//    }
+    //myPlot->updateGeometry();
 
     QWidget::paintEvent(e);
 }
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
+    if(screen()->size().width()>=screen()->size().height())
+    {
+        myPlot->resize(stack->width(),stack->height());
+        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
+    }
+    else
+    {
+        myPlot->resize(stack->width(),stack->height()/2.2);
+        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
+    }
     QWidget::resizeEvent(event);
 }
 //bool request_Android_Permission(const QString &str_permission)

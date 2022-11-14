@@ -59,7 +59,7 @@ void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickC
     axis_X->setMinorGridLineVisible(false);
 
     axis_Y->setRange(this->min_Y,this->max_Y);
-    axis_Y->setLabelFormat("%.3f");//%u:无符号十进制数
+    axis_Y->setLabelFormat("%u");//%u:无符号十进制数
     axis_Y->setGridLineVisible(false);
     axis_Y->setMinorTickCount(1);
     axis_Y->setTickCount(tickCount_Y);
@@ -77,6 +77,8 @@ void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickC
     font.setBold(false);
     text->setFont(font);
     text->setPen(QPen(QColor(0,0,0)));
+    if(size().width()<size().height())
+        resize(size().width(),size().height()/2.2);
 }
 void plotWidget::initChart()
 {
@@ -106,6 +108,8 @@ void plotWidget::initChart()
     myChart->setAxisY(axis_Y,myLineSeries);
     myChart->setAxisX(axis_X,myScatters);
     myChart->setAxisY(axis_Y,myScatters);
+    if(size().width()<size().height())
+        resize(size().width(),size().height()/2.2);
 
 
 }
@@ -113,10 +117,11 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
 {
     test1(points,int(points.size()));
     qDebug()<<points;
-    axis_X->setMax(int(points.back().x())+1);
-    axis_X->setMin((points.front().x()/1.2/axis_X->max())>0.4?points.front().x()/1.2:0);
-    axis_X->setTickCount(axis_X->max()+1);
-    axis_Y->setMax(points.back().y()*1.2);
+//    axis_X->setMax(int(points.back().x())+1);
+//    axis_X->setMin((points.front().x()/1.2/axis_X->max())>0.4?points.front().x()/1.2:0);
+//    axis_X->setTickCount(axis_X->max()+1);
+//    axis_Y->setMax(points.back().y()*1.2);
+
     std::vector<QPointF> pointsFit = calculate(points);
     myLineSeries->clear();
     myScatters->clear();
@@ -137,7 +142,8 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
 
         text->setText(str);
         qDebug()<<"plot:"<<str;
-        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.65,this->axis_Y->max()*0.95)));
+//        text->hide();
+        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.95)));
         delete[] charCode;
     }
 
@@ -146,6 +152,8 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
         myLineSeries->append(pointsFit.at(i).x(),pointsFit.at(i).y());
         myScatters->append(points.at(i).x(),points.at(i).y());
     }
+    if(size().width()<size().height())
+        resize(size().width(),size().height()/2.2);
 }
 std::vector<QPointF> plotWidget::calculate(std::vector<QPointF> points )
 {
@@ -186,12 +194,23 @@ std::vector<QPointF> plotWidget::calculate(std::vector<QPointF> points )
     return buff;
 
 }
+void plotWidget::clear()
+{
+    this->myLineSeries->clear();
+    this->myScatters->clear();
 
+}
 void plotWidget::paintEvent(QPaintEvent* )
 {
-    //this->resize()
+    if(size().width()<size().height())
+        resize(size().width(),size().height()/2.2);
 }
 
+void plotWidget::resizeEvent(QResizeEvent* )
+{
+    if(size().width()<size().height())
+        resize(size().width(),size().height()/2.2);
+}
 
 void test1(std::vector<QPointF> &vector, int hi)//冒泡排序
 {

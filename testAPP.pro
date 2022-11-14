@@ -51,6 +51,7 @@ LIBS += $$ANDROID_OPENCV/staticlibs/armeabi-v7a/libopencv_calib3d.a \
 
 SOURCES += \
     abcddialog.cpp \
+    datatabel.cpp \
     imagelabel.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -60,6 +61,7 @@ SOURCES += \
 
 HEADERS += \
     abcddialog.h \
+    datatabel.h \
     imagelabel.h \
     mainwindow.h \
     plotwidget.h \

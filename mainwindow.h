@@ -8,11 +8,13 @@
 #include <QVBoxLayout>
 #include "plotwidget.h"
 #include "imagelabel.h"
+#include "datatabel.h"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <QStackedWidget>
 #include <sampledialog.h>
+#include <QTableWidget>
 
 #define assertRectValid(x,y,w,h,imageW,ImageH) ((((x>=0)&&(w>=0)&&(x+w<imageW)&&(y>=0)&&(h>=0)&&(y+h<imageW))>0)?true:false)
 struct object_rect {
@@ -37,8 +39,10 @@ public slots:
     void slot_processBtn2();
     void slot_switchToImage();
     void slot_switchToChart();
+    void slot_switchToTable();
 
 private:
+    void initDataTable();
     void paintEvent(QPaintEvent*) override;
     void resizeEvent(QResizeEvent*) override;
     void updateLabelText(int x, QString str);
@@ -54,9 +58,11 @@ private:
     QPushButton* chooseImageButton;
     QPushButton* btn_stackToImage;
     QPushButton* btn_stackToChart;
+    QPushButton* btn_stackToTable;
     QVBoxLayout* mainLayout;
     QStringList filename;
     plotWidget *myPlot;
+    QTableWidget *myTable;
 
 
     std::vector<std::vector<double>> average_B;
@@ -68,6 +74,7 @@ private:
     std::vector<std::vector<double>> textBuffer;
     std::vector<std::vector<double>> textH2O2;
     std::vector<std::vector<double>> textGlucose;
+    std::vector<std::vector<bool>> mask;
     cv::Mat text_frame;
     cv::Mat frameBtn1;
     cv::Mat frameBtn2;
@@ -77,6 +84,7 @@ private:
     std::vector<QPointF> points1;
     int index1;
     int index2;
+    int index3;
     sampleType m_sampleType;
 };
 #endif // MAINWINDOW_H
