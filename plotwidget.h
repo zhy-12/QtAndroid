@@ -44,6 +44,7 @@ public:
     int tickCount_Y;
     qreal slop;
     qreal Intercept;
+    qreal R2;
     QGraphicsSimpleTextItem* text;
 
 private:
