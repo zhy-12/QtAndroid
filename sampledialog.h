@@ -5,7 +5,7 @@
 #include <QLabel>
 #include <QCheckBox>
 #include <QPushButton>
-typedef enum {sampleType_h202=1,sampleType_glucose,sampleType_non}sampleType;
+typedef enum {sampleType_h202=1,sampleType_glucose,sampleType_absorbance,sampleType_non}sampleType;
 class sampleDialog : public QDialog
 {
     Q_OBJECT
@@ -15,11 +15,12 @@ public:
 public:
     QPushButton* h2o2Btn;
     QPushButton* glucoseBtn;
+    QPushButton* absorbanceBtn;
     sampleType m_sampleType;
 public slots:
     void slot_processH2O2(void);
     void slot_processGlucose(void);
-
+    void slot_processAbsorbance(void);
 signals:
 
 };
