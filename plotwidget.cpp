@@ -4,7 +4,7 @@
 #include <QtCharts/QSplineSeries>
 #include <QtCharts/QValueAxis>
 #include <QGraphicsSimpleTextItem>
-
+#include "callout.h"
 void test1(std::vector<QPointF> &vector, int hi);//冒泡排序
 plotWidget::plotWidget(QWidget *parent, QString chartName)
     : QWidget{parent}
@@ -17,7 +17,15 @@ plotWidget::plotWidget(QWidget *parent, QString chartName)
     , axis_Y(new QValueAxis(this))
     , chartName(chartName)
     , text(new QGraphicsSimpleTextItem(myChart))
+//    , m_coordX(0)
+//    , m_coordY(0)
+    , m_tooltip(0)
+
 {
+    //setStyleSheet("QWidget{background-color:white;}");
+    myChartView->setDragMode(QGraphicsView::NoDrag);
+    myChartView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    myChartView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     myChartView->setRenderHint(QPainter::Antialiasing);
     myChartView->setScreen(parent->screen());
@@ -31,7 +39,16 @@ plotWidget::plotWidget(QWidget *parent, QString chartName)
 
     this->setLayout(layout);
     this->setContentsMargins(0,0,0,0);
+//    m_coordX = new QGraphicsSimpleTextItem(myChart);
+//    m_coordX->setPos(myChart->size().width()/2 - 50, myChart->size().height());
+//    m_coordX->setText("X: ");
+//    m_coordY = new QGraphicsSimpleTextItem(myChart);
+//    m_coordY->setPos(myChart->size().width()/2 + 50, myChart->size().height());
+//    m_coordY->setText("Y: ");
 
+    connect(myScatters, &QScatterSeries::clicked, this, &plotWidget::keepCallout);
+//    connect(myScatters, &QScatterSeries::hovered, this, &plotWidget::tooltip);
+    this->setMouseTracking(true);
 }
 void plotWidget::setAixs(QString axisName_X, qreal min_X, qreal max_X, int tickCount_X, \
                          QString axisName_Y, qreal min_Y, qreal max_Y, int tickCount_Y)
@@ -108,6 +125,7 @@ void plotWidget::initChart()
     myChart->setAxisY(axis_Y,myLineSeries);
     myChart->setAxisX(axis_X,myScatters);
     myChart->setAxisY(axis_Y,myScatters);
+    myChartView->setRenderHint(QPainter::Antialiasing);
     if(size().width()<size().height())
         resize(size().width(),size().height()/2.2);
 
@@ -115,6 +133,15 @@ void plotWidget::initChart()
 }
 void plotWidget::slot_updateChart(std::vector<QPointF> points)
 {
+    for (int i = 0; i<m_callouts.size();++i)
+    {
+
+       m_callouts[i]->hide();
+       m_callouts.removeAt(i);
+       i--;
+    }
+    m_callouts.clear();
+
     test1(points,int(points.size()));
     qDebug()<<points;
 //    axis_X->setMax(int(points.back().x())+1);
@@ -143,7 +170,7 @@ void plotWidget::slot_updateChart(std::vector<QPointF> points)
         text->setText(str);
         qDebug()<<"plot:"<<str;
 //        text->hide();
-        text->setPos(myChart->mapToPosition(QPointF(this->axis_X->max()*0.7,this->axis_Y->max()*0.95)));
+
         delete[] charCode;
     }
 
@@ -198,18 +225,85 @@ void plotWidget::clear()
 {
     this->myLineSeries->clear();
     this->myScatters->clear();
+    m_callouts.clear();
+
+    text->hide();
 
 }
-void plotWidget::paintEvent(QPaintEvent* )
+void plotWidget::paintEvent(QPaintEvent* e)
 {
     if(size().width()<size().height())
         resize(size().width(),size().height()/2.2);
+    QWidget::paintEvent(e);
 }
 
-void plotWidget::resizeEvent(QResizeEvent* )
+void plotWidget::resizeEvent(QResizeEvent* event)
 {
-    if(size().width()<size().height())
-        resize(size().width(),size().height()/2.2);
+
+
+    if (myChartView->scene())
+    {
+        if(size().width()<size().height())
+            myChartView->scene()->setSceneRect(QRect(QPoint(0, 0), QSize(event->size().width(),event->size().height()/2.3)));
+        myChartView->scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
+         myChart->resize(event->size());
+//         m_coordX->setPos(myChart->size().width()/2 - 50, myChart->size().height() - 20);
+//         m_coordY->setPos(myChart->size().width()/2 + 50, myChart->size().height() - 20);
+         text->setPos(myChart->size().width()/3*2, 20);
+         const auto callouts = m_callouts;
+         for (Callout *callout : callouts)
+             callout->updateGeometry();
+    }
+
+}
+void plotWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    //m_coordX->setText(QString("Xgv: %1").arg(myChart->mapToValue(event->pos()).x()));
+    //m_coordY->setText(QString("Ygf: %1").arg(myChart->mapToValue(event->pos()).y()));
+
+}
+void plotWidget::keepCallout(QPointF point)
+{
+    bool theSame = false;
+    if (m_tooltip == 0)
+    {
+        m_tooltip = new Callout(myChart);
+    }
+    if(!m_callouts.isEmpty())
+    {
+        for (int i = 0; i<m_callouts.size();++i)
+        {
+            qDebug()<<"point"<<point;
+            qDebug()<<"m_callouts[i]->getAnchor()"<<m_callouts[i]->getAnchor();
+            if(m_callouts[i]->getAnchor().x() == point.x()&&m_callouts[i]->getAnchor().y() == point.y())
+            {
+//               m_callouts[i]->checkState++;
+               theSame = true;
+               m_callouts[i]->hide();
+
+
+
+               m_callouts.removeAt(i);
+               i--;
+
+            }
+        }
+    }
+    if (theSame!=true)
+    {
+        m_tooltip->setText(QString("X: %1 \nY: %2 ").arg(point.x()).arg(point.y()));
+        m_tooltip->setAnchor(point);
+        m_tooltip->setZValue(11);
+        m_tooltip->updateGeometry();
+        m_tooltip->show();
+        m_callouts.append(m_tooltip);
+    }
+
+    m_tooltip = new Callout(myChart);
+}
+void plotWidget::tooltip(QPointF point, bool state)
+{
+
 }
 
 void test1(std::vector<QPointF> &vector, int hi)//冒泡排序

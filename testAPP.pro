@@ -57,7 +57,8 @@ SOURCES += \
     mainwindow.cpp \
     plotwidget.cpp \
     sampledialog.cpp \
-    scrollareawidget.cpp
+    scrollareawidget.cpp \
+    callout.cpp
 
 HEADERS += \
     abcddialog.h \
@@ -66,7 +67,8 @@ HEADERS += \
     mainwindow.h \
     plotwidget.h \
     sampledialog.h \
-    scrollareawidget.h
+    scrollareawidget.h \
+    callout.h
 
 
 # Default rules for deployment.

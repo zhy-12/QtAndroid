@@ -16,14 +16,14 @@
 #include <sampledialog.h>
 #include <QTableWidget>
 
-#define assertRectValid(x,y,w,h,imageW,ImageH) ((((x>=0)&&(w>=0)&&(x+w<imageW)&&(y>=0)&&(h>=0)&&(y+h<imageW))>0)?true:false)
+#define assertRectValid(x,y,w,h,imageW,ImageH) ((((x)>=0)&&((w)>=0)&&(((x)+(w))<(imageW))&&((y)>=0)&&((h)>=0)&&(((y)+(h))<(imageW))))
 struct object_rect {
     int x;
     int y;
     int width;
     int height;
 };
-class MainWindow : public QWidget
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -74,6 +74,7 @@ private:
     std::vector<std::vector<double>> textBuffer;
     std::vector<std::vector<double>> textH2O2;
     std::vector<std::vector<double>> textGlucose;
+    std::vector<std::vector<double>> textAbsorbance;
     std::vector<std::vector<bool>> mask;
     cv::Mat text_frame;
     cv::Mat frameBtn1;

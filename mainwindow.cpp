@@ -22,20 +22,20 @@ void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
 int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area);
 
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent)
+    : QMainWindow(parent)
     , stack(new QStackedWidget(this))
     , myLabel(new QLabel(this))
     , myImageLabel(new imageLabel(this))
-    , myButton1(new QPushButton("reagent",this))
+    , myButton1(new QPushButton("Model",this))
     , myButton2(new QPushButton("linear",this))
     , chooseImageButton(new QPushButton("Select",this))
     , btn_stackToImage(new QPushButton("Image",this))
     , btn_stackToChart(new QPushButton("Chart",this))
-    , btn_stackToTable(new QPushButton("Table",this))
+    , btn_stackToTable(new QPushButton("RGB",this))
     , myPlot(new plotWidget(this,"chart"))
     , myTable(new QTableWidget(8,12,this))
 {
-    setStyleSheet("Qwidget{background-color:white;}");
+    setStyleSheet("QMianWindow{background-color:white;}");
     m_sampleType = sampleType_non;
 
     myLabel->setAlignment(Qt::AlignCenter);
@@ -46,7 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     myLabel->setFont(ft);
     updateLabelText(1,"");
 //    myImageLabel->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    myPlot->setAixs("position",0,12,13,"concentration ",0,300,6);
+    myPlot->setAixs("position",0,12,13,"G",0,300,6);
     myPlot->initChart();
     myPlot->hide();
 //    myPlot->set
@@ -77,7 +77,9 @@ MainWindow::MainWindow(QWidget *parent)
     //myImageLabel->setAlignment(Qt::AlignHCenter);
     mainLayout->addWidget(stack);
     mainLayout->addLayout(buttonLayout);
-    this->setLayout(mainLayout);
+    QWidget * centerWidget = new QWidget(this);
+    centerWidget->setLayout(mainLayout);
+    this->setCentralWidget(centerWidget);
     //this->showFullScreen();
     //this->setFixedSize(this->screen()->size());
     myButton1->connect(myButton1, SIGNAL(pressed()),this,SLOT(slot_processBtn1()));
@@ -210,6 +212,7 @@ void MainWindow::slot_chooseImage()
         average_H.clear();
         average_S.clear();
         average_V.clear();
+        this->myTable->clear();
     }
     cX.clear();
     cY.clear();
@@ -268,6 +271,13 @@ void MainWindow::slot_chooseImage()
             break;
         }
     }
+
+    if(!assertRectValid(y_top,x_top,y_bottom-y_top,x_bottom-x_top,frame.cols,frame.rows))
+    {
+        QMessageBox::warning(this,"choose Image error","please retry",QMessageBox::Close);
+        return;
+    }
+
     frame = frame(cv::Rect(y_top,x_top,y_bottom-y_top,x_bottom-x_top));
     qDebug()<<"frame3:"<<frame.cols<<" "<<frame.rows;
     frame.copyTo(text_frame);
@@ -281,32 +291,38 @@ void MainWindow::slot_chooseImage()
     textBuffer.clear();
     textH2O2.clear();
     textGlucose.clear();
+    textAbsorbance.clear();
     double temp;
     std::vector<double> temp_H2O2;
     std::vector<double> temp_Glucose;
+    std::vector<double> temp_Absorbance;
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
         {
-            if((average_S[i][j]+22.1059)/286.3640 < 0.95)
+            if((average_S[i][j]+35.7905)/219.2612 < 0.95)
             {
-                temp = double((average_S[i][j] + 22.1059)/286.3640);
-                temp_H2O2.push_back(temp);
-                temp_Glucose.push_back(temp);
+                temp = double((average_S[i][j] + 35.7905)/219.2612);
+                temp_H2O2.push_back(0.1683*temp-0.0342);
+                temp_Glucose.push_back(1.4914*temp-0.4627);
+                temp_Absorbance.push_back(temp);
             }
 
             else
             {
                 temp = double((average_G[i][j] - 219.7655)/(-28.0058));
-                temp_H2O2.push_back(temp);
-                temp_Glucose.push_back(temp);
+                temp_H2O2.push_back(0.1683*temp-0.0342);
+                temp_Glucose.push_back(1.4914*temp-0.4627);
+                temp_Absorbance.push_back(temp);
             }
         }
         qDebug()<<"temp_H2O2:"<<temp_H2O2;
         textH2O2.push_back(temp_H2O2);
         textGlucose.push_back(temp_Glucose);
+        textAbsorbance.push_back(temp_Absorbance);
         temp_H2O2.clear();
         temp_Glucose.clear();
+        temp_Absorbance.clear();
     }
     updateImage(text_frame);
     this->myPlot->myLineSeries->clear();
@@ -331,24 +347,33 @@ void MainWindow::updateImage(cv::Mat frame)
 
 void MainWindow::slot_processBtn1()
 {
-//    sampleDialog* dialog = new sampleDialog();
-//    if(dialog->exec())
-//    {
-//        m_sampleType = dialog->m_sampleType;
-//    }
-    m_sampleType = sampleType_h202;
+    double threshold;
+    sampleDialog* dialog = new sampleDialog();
+    if(dialog->exec())
+    {
+        m_sampleType = dialog->m_sampleType;
+    }
     switch (m_sampleType) {
     case sampleType_h202:
         textBuffer = textH2O2;
+        threshold = 0.01;
         updateLabelText(1,"H2O2");
         break;
     case sampleType_glucose:
         textBuffer = textGlucose;
+        threshold = 0.01;
         updateLabelText(1,"Glucose");
         break;
+    case sampleType_absorbance:
+        textBuffer = textAbsorbance;
+        threshold = 0.28;
+        updateLabelText(1,"Absorbance");
+        break;
     case sampleType_non:
+        threshold = 0.0;
         return;
     default:
+        threshold = 0.0;
         break;
     }
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
@@ -356,9 +381,6 @@ void MainWindow::slot_processBtn1()
     std::string text;
     cv::Mat temp_frame;
     frameBtn1.copyTo(temp_frame);
-
-//    cv::resize(frameBtn1,temp_frame,temp_size,0,0,cv::INTER_CUBIC);
-//    cv::resize(temp_frame,temp_frame,cv::Size(temp_frame.size().width/8,temp_frame.size().height/8),0,0,cv::INTER_CUBIC);
     mask.clear();
     std::vector<bool> mask_lineTemp;
 
@@ -366,7 +388,7 @@ void MainWindow::slot_processBtn1()
     {
         for(int j=0;j<12;j++)
         {
-            if(textBuffer[i][j]>0.2)
+            if(textBuffer[i][j]>threshold)
             {
                 mask_lineTemp.push_back(1);
                 text = std::to_string(textBuffer[i][j]);
@@ -382,7 +404,9 @@ void MainWindow::slot_processBtn1()
 //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
                 QTableWidgetItem *item = new QTableWidgetItem;
                 item->setBackground(QBrush(QColor(0,0,0)));
-                item->setText(QString::number(int(average_G[i][j])));
+                item->setForeground(QColor(125,182,191));
+                QString str =QString("R%1\nG%2\nB%3").arg(QString::number(int(average_R[i][j])),QString::number(int(average_G[i][j])),QString::number(int(average_B[i][j])));
+                item->setText(str);
                 myTable->setItem(i,j,item);
             }
             else
@@ -399,6 +423,11 @@ void MainWindow::slot_processBtn1()
 }
 void MainWindow::slot_processBtn2()
 {
+    if(textBuffer.empty())
+    {
+        QMessageBox::warning(this,"WARNING","Please click button Model first",QMessageBox::Close);
+        return;
+    }
     std::vector<double> center_x ;
     std::vector<int> tt;
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
