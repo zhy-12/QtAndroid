@@ -391,6 +391,7 @@ void MainWindow::slot_processBtn1()
             if(textBuffer[i][j]>threshold)
             {
                 mask_lineTemp.push_back(1);
+                //write the textbuffer value to the corresponding position on the image
                 text = std::to_string(textBuffer[i][j]);
                 text = text.substr(0, text.find(".") + 2 + 1);
                 int baseline;
@@ -402,6 +403,7 @@ void MainWindow::slot_processBtn1()
                 temp_point.y = center[i][j].y + text_Size.height/2;
                 cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
 //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
+                //update table items with the corresponding RGB
                 QTableWidgetItem *item = new QTableWidgetItem;
                 item->setBackground(QBrush(QColor(0,0,0)));
                 item->setForeground(QColor(125,182,191));
@@ -412,7 +414,6 @@ void MainWindow::slot_processBtn1()
             else
             {
                 mask_lineTemp.push_back(0);
-//                myTable->setItem(i,j,item);
             }
         }
         mask.push_back(mask_lineTemp);
@@ -428,64 +429,41 @@ void MainWindow::slot_processBtn2()
         QMessageBox::warning(this,"WARNING","Please click button Model first",QMessageBox::Close);
         return;
     }
-    std::vector<double> center_x ;
     std::vector<int> tt;
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
     ABCDdialog *dialog = new ABCDdialog(this);
     if(dialog->exec())
     {
-        if(dialog->checkBox_A->isChecked())
-        {
-            center_x.push_back(270);
+        if(dialog->checkBox_A->isChecked()){
             tt.push_back(1);
         }
-        if(dialog->checkBox_B->isChecked())
-        {
-            center_x.push_back(500);
+        if(dialog->checkBox_B->isChecked()){
             tt.push_back(2);
         }
-
-        if(dialog->checkBox_C->isChecked())
-        {
-            center_x.push_back(700);
+        if(dialog->checkBox_C->isChecked()){
             tt.push_back(3);
         }
-
-        if(dialog->checkBox_D->isChecked())
-        {
-            center_x.push_back(950);
+        if(dialog->checkBox_D->isChecked()){
             tt.push_back(4);
         }
-
-        if(dialog->checkBox_E->isChecked())
-        {
-            center_x.push_back(1150);
+        if(dialog->checkBox_E->isChecked()){
             tt.push_back(5);
         }
-
-        if(dialog->checkBox_F->isChecked())
-        {
-            center_x.push_back(1400);
+        if(dialog->checkBox_F->isChecked()){
             tt.push_back(6);
         }
-        if(dialog->checkBox_G->isChecked())
-        {
-            center_x.push_back(1600);
+        if(dialog->checkBox_G->isChecked()){
             tt.push_back(7);
         }
-        if(dialog->checkBox_H->isChecked())
-        {
-            center_x.push_back(1825);
+        if(dialog->checkBox_H->isChecked()){
             tt.push_back(8);
         }
-
-        if(center_x.empty())
+        if(tt.empty())
             return;
     }
-    std::vector<std::vector<double>> line_ave_s;
     points1.clear();
-    textBuffer = average_G;
+    auto colorBuffer = average_G;
     if(tt.size()>1||tt.size()==0)
     {
         QMessageBox::warning(this,"WARNING","Select one line",QMessageBox::Close);
@@ -545,18 +523,6 @@ void MainWindow::initDataTable()
 void MainWindow::paintEvent(QPaintEvent* e)
 {
     myTable->resizeRowsToContents();
-//    if(screen()->size().width()>=screen()->size().height())
-//    {
-//        myPlot->resize(stack->width(),stack->height());
-//        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
-//    }
-//    else
-//    {
-//        myPlot->resize(stack->width(),stack->height()/2.2);
-//        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
-//    }
-    //myPlot->updateGeometry();
-
     QWidget::paintEvent(e);
 }
 void MainWindow::resizeEvent(QResizeEvent *event)
@@ -564,12 +530,10 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     if(screen()->size().width()>=screen()->size().height())
     {
         myPlot->resize(stack->width(),stack->height());
-        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.8,myPlot->axis_Y->max()*0.95)));
     }
     else
     {
         myPlot->resize(stack->width(),stack->height()/2.2);
-        //this->myPlot->text->setPos(myPlot->myChart->mapToPosition(QPointF(myPlot->axis_X->max()*0.7,myPlot->axis_Y->max()*0.95)));
     }
     QWidget::resizeEvent(event);
 }
