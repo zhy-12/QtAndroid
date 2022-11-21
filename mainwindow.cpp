@@ -311,14 +311,20 @@ void MainWindow::slot_chooseImage()
     {
         for(int j=0;j<12;j++)
         {
-            if((average_S[i][j]+35.7905)/219.2612 < 0.95)
+            if((average_S[i][j]+35.7905)/219.2612 < 0.52)
+            {
+                temp = double((average_S[i][j] + 10.2910)/170.3633);
+                temp_H2O2.push_back(0.1683*temp-0.0342);
+                temp_Glucose.push_back(1.4914*temp-0.4627);
+                temp_Absorbance.push_back(temp);
+            }
+            else if(((average_S[i][j] + 35.7905)/(219.2612) < 1) && ((average_S[i][j] + 35.7905)/(219.2612) > 0.52))
             {
                 temp = double((average_S[i][j] + 35.7905)/219.2612);
                 temp_H2O2.push_back(0.1683*temp-0.0342);
                 temp_Glucose.push_back(1.4914*temp-0.4627);
                 temp_Absorbance.push_back(temp);
             }
-
             else
             {
                 temp = double((average_G[i][j] - 219.7655)/(-28.0058));
@@ -378,7 +384,7 @@ void MainWindow::slot_processBtn1()
         break;
     case sampleType_absorbance:
         textBuffer = textAbsorbance;
-        threshold = 0.28;
+        threshold = 0.12;
         updateLabelText(1,"Absorbance");
         break;
     case sampleType_non:
