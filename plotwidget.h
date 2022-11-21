@@ -10,6 +10,10 @@
 #include <QLabel>
 #include <QScatterSeries>
 #include <QLegend>
+#include <QtWidgets/QGraphicsView>
+#include <QtCharts/QChartGlobal>
+
+class Callout;
 class plotWidget : public QWidget
 {
     Q_OBJECT
@@ -21,7 +25,10 @@ public:
     void initChart();
     void paintEvent(QPaintEvent* ) override;
     std::vector<QPointF> calculate(std::vector<QPointF> points);
-//    void resizeEvent(QResizeEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void clear();
+
 
 public:
     QChart *myChart;
@@ -44,14 +51,22 @@ public:
     int tickCount_Y;
     qreal slop;
     qreal Intercept;
+    qreal R2;
     QGraphicsSimpleTextItem* text;
 
 private:
+//    QGraphicsSimpleTextItem *m_coordX;
+//    QGraphicsSimpleTextItem *m_coordY;
+    Callout *m_tooltip;
+    QList<Callout *> m_callouts;
 
 signals:
 
 public slots:
     void slot_updateChart(std::vector<QPointF> points);
+    void keepCallout(QPointF point);
+    void tooltip(QPointF point, bool state);
+
 };
 
 #endif // PLOTWIDGET_H
