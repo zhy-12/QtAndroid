@@ -17,6 +17,7 @@
 #include <QListWidget>
 #include <QScrollBar>
 #include <QTableWidgetItem>
+#include <rotateimagedialog.h>
 void printVector(std::vector<QPointF> vector);
 void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
 int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area);
@@ -212,7 +213,7 @@ void MainWindow::slot_chooseImage()
         average_H.clear();
         average_S.clear();
         average_V.clear();
-        this->myTable->clear();
+        this->myTable->clearContents();
     }
     cX.clear();
     cY.clear();
@@ -222,12 +223,22 @@ void MainWindow::slot_chooseImage()
     cv::Mat imgage_hsv;
     cv::Mat mask0;
     QImage img_temp(filename[0]);
+
+
+
+    rotateImageDialog *rotateDialog = new rotateImageDialog(this);
+    rotateDialog->setPicture(img_temp);
+    if(rotateDialog->exec())
+    {
+        //img_temp = rotateDialog->getPicture().copy(rotateDialog->getPicture().rect());
+    }
     if(img_temp.width()<img_temp.height())
     {
         QTransform matrix;
         matrix.rotate(90);
         img_temp = img_temp.transformed(matrix);
     }
+
     img_temp = img_temp.convertToFormat(QImage::Format_BGR888);
     img_temp = img_temp.scaled(QSize(4680,3456),Qt::IgnoreAspectRatio);
     qDebug()<<"img_temp"<<img_temp.size().width()<<" "<<img_temp.size().height();
@@ -378,6 +389,45 @@ void MainWindow::slot_processBtn1()
     }
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
         return;
+    std::vector<int> tt;
+    ABCDdialog *dialog_selcetLine = new ABCDdialog(this);
+    if(dialog_selcetLine->exec())
+    {
+        if(dialog_selcetLine->checkBox_A->isChecked()){
+            tt.push_back(1);
+        }
+        if(dialog_selcetLine->checkBox_B->isChecked()){
+            tt.push_back(2);
+        }
+        if(dialog_selcetLine->checkBox_C->isChecked()){
+            tt.push_back(3);
+        }
+        if(dialog_selcetLine->checkBox_D->isChecked()){
+            tt.push_back(4);
+        }
+        if(dialog_selcetLine->checkBox_E->isChecked()){
+            tt.push_back(5);
+        }
+        if(dialog_selcetLine->checkBox_F->isChecked()){
+            tt.push_back(6);
+        }
+        if(dialog_selcetLine->checkBox_G->isChecked()){
+            tt.push_back(7);
+        }
+        if(dialog_selcetLine->checkBox_H->isChecked()){
+            tt.push_back(8);
+        }
+        if(tt.empty())
+            return;
+    }
+    if(tt.empty()==true)
+    {
+        QMessageBox::warning(this,"WARNING","Select one or more lines",QMessageBox::Close);
+        return;
+    }
+    myTable->clearContents();
+
+    bool pass = true;
     std::string text;
     cv::Mat temp_frame;
     frameBtn1.copyTo(temp_frame);
@@ -386,35 +436,49 @@ void MainWindow::slot_processBtn1()
 
     for(int i=0;i<8;i++)
     {
-        for(int j=0;j<12;j++)
+        for(int x = 0;x<int(tt.size());x++)
         {
-            if(textBuffer[i][j]>threshold)
-            {
-                mask_lineTemp.push_back(1);
-                //write the textbuffer value to the corresponding position on the image
-                text = std::to_string(textBuffer[i][j]);
-                text = text.substr(0, text.find(".") + 2 + 1);
-                int baseline;
-                cv::Point temp_point;
-                int thickness = 8;
-                double font_scale = 2.8;
-                cv::Size text_Size = cv::getTextSize(text,cv::FONT_HERSHEY_SIMPLEX,font_scale,thickness,&baseline);
-                temp_point.x = center[i][j].x - text_Size.width/2*0.8;
-                temp_point.y = center[i][j].y + text_Size.height/2;
-                cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
-//                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
-                //update table items with the corresponding RGB
-                QTableWidgetItem *item = new QTableWidgetItem;
-                item->setBackground(QBrush(QColor(0,0,0)));
-                item->setForeground(QColor(125,182,191));
-                QString str =QString("R%1\nG%2\nB%3").arg(QString::number(int(average_R[i][j])),QString::number(int(average_G[i][j])),QString::number(int(average_B[i][j])));
-                item->setText(str);
-                myTable->setItem(i,j,item);
-            }
+            if((tt[x]-1)==i)
+                pass = false;
             else
+                pass = true;
+        }
+        if(pass == false)
+        {
+            for(int j=0;j<12;j++)
             {
-                mask_lineTemp.push_back(0);
+                if(textBuffer[i][j]>threshold)
+                {
+                    mask_lineTemp.push_back(1);
+                    //write the textbuffer value to the corresponding position on the image
+                    text = std::to_string(textBuffer[i][j]);
+                    text = text.substr(0, text.find(".") + 2 + 1);
+                    int baseline;
+                    cv::Point temp_point;
+                    int thickness = 8;
+                    double font_scale = 2.8;
+                    cv::Size text_Size = cv::getTextSize(text,cv::FONT_HERSHEY_SIMPLEX,font_scale,thickness,&baseline);
+                    temp_point.x = center[i][j].x - text_Size.width/2*0.8;
+                    temp_point.y = center[i][j].y + text_Size.height/2;
+                    cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
+                    //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
+                    //update table items with the corresponding RGB
+                    QTableWidgetItem *item = new QTableWidgetItem;
+                    item->setBackground(QBrush(QColor(0,0,0)));
+                    item->setForeground(QColor(125,182,191));
+                    QString str =QString("R%1\nG%2\nB%3").arg(QString::number(int(average_R[i][j])),QString::number(int(average_G[i][j])),QString::number(int(average_B[i][j])));
+                    item->setText(str);
+                    myTable->setItem(i,j,item);
+                }
+                else
+                {
+                    mask_lineTemp.push_back(0);
+                }
             }
+        } else
+        {
+            for(int j=0;j<12;j++)
+                mask_lineTemp.push_back(0);
         }
         mask.push_back(mask_lineTemp);
         mask_lineTemp.clear();
@@ -469,30 +533,20 @@ void MainWindow::slot_processBtn2()
         QMessageBox::warning(this,"WARNING","Select one line",QMessageBox::Close);
         return;
     }
-//    for(int i=0,k=0;i<int(tt.size());i++)
-//    {
-        for(int j=0;j<12;j++)
-        {
-            if(mask[tt.back()-1][j]==true)
-            {
-//                k++;
 
-                points1.push_back(QPointF(j+1,textBuffer[tt.back()-1][j]));
-                qDebug()<<points1.back();
-            }
+    for(int j=0;j<12;j++)
+    {
+        if(mask[tt.back()-1][j]==true)
+        {
+            points1.push_back(QPointF(j+1,colorBuffer[tt.back()-1][j]));
+            qDebug()<<points1.back();
         }
-//    }
+    }
     if(!points1.empty())
         myPlot->slot_updateChart(points1);
     else
         myPlot->clear();
-
     this->slot_switchToChart();
-//    if(screen()->size().width()>=screen()->size().height())
-//        myPlot->resize(stack->width(),stack->height());
-//    else
-//        myPlot->resize(stack->width(),stack->height()/2.2);
-//    myPlot->updateGeometry();
     this->updateLabelText(2,"");
 }
 void MainWindow::initDataTable()

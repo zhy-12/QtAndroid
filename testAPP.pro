@@ -56,6 +56,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     plotwidget.cpp \
+    rotateimagedialog.cpp \
     sampledialog.cpp \
     scrollareawidget.cpp \
     callout.cpp
@@ -66,6 +67,7 @@ HEADERS += \
     imagelabel.h \
     mainwindow.h \
     plotwidget.h \
+    rotateimagedialog.h \
     sampledialog.h \
     scrollareawidget.h \
     callout.h

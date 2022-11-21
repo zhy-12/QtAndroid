@@ -3,18 +3,20 @@
 #include <QHBoxLayout>
 ABCDdialog::ABCDdialog(QWidget *parent)
     : QDialog{parent}
-    , checkBox_A(new QCheckBox("A",this))
-    , checkBox_B(new QCheckBox("B",this))
-    , checkBox_C(new QCheckBox("C",this))
-    , checkBox_D(new QCheckBox("D",this))
-    , checkBox_E(new QCheckBox("E",this))
-    , checkBox_F(new QCheckBox("F",this))
-    , checkBox_G(new QCheckBox("G",this))
-    , checkBox_H(new QCheckBox("H",this))
+    , checkBox_A(new QCheckBox("Line A",this))
+    , checkBox_B(new QCheckBox("Line B",this))
+    , checkBox_C(new QCheckBox("Line C",this))
+    , checkBox_D(new QCheckBox("Line D",this))
+    , checkBox_E(new QCheckBox("Line E",this))
+    , checkBox_F(new QCheckBox("Line F",this))
+    , checkBox_G(new QCheckBox("Line G",this))
+    , checkBox_H(new QCheckBox("Line H",this))
     , applyButton(new QPushButton("Apply",this))
     , selectAllButton(new QPushButton("Select All",this))
 {
-    setStyleSheet("QcheckBox::indicator{width:20px;height:20px}");
+    setStyleSheet("QcheckBox{border: none;color: white: }"
+                  "QDialog{background: rgb(217,218,214);}"
+                  "QCheckBox::indicator{Width: 25px;Height: 25px;}");
     QVBoxLayout *layout = new QVBoxLayout(this);
     QHBoxLayout *btnLayout = new QHBoxLayout();
     layout->addWidget(checkBox_A);
