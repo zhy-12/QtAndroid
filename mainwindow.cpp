@@ -227,17 +227,17 @@ void MainWindow::slot_chooseImage()
 
 
     rotateImageDialog *rotateDialog = new rotateImageDialog(this);
-    rotateDialog->setPicture(img_temp);
+    rotateDialog->setPicture(&img_temp);
     if(rotateDialog->exec())
     {
         //img_temp = rotateDialog->getPicture().copy(rotateDialog->getPicture().rect());
     }
-    if(img_temp.width()<img_temp.height())
-    {
-        QTransform matrix;
-        matrix.rotate(90);
-        img_temp = img_temp.transformed(matrix);
-    }
+//    if(img_temp.width()<img_temp.height())
+//    {
+//        QTransform matrix;
+//        matrix.rotate(90);
+//        img_temp = img_temp.transformed(matrix);
+//    }
 
     img_temp = img_temp.convertToFormat(QImage::Format_BGR888);
     img_temp = img_temp.scaled(QSize(4680,3456),Qt::IgnoreAspectRatio);
@@ -338,6 +338,7 @@ void MainWindow::slot_chooseImage()
     updateImage(text_frame);
     this->myPlot->myLineSeries->clear();
     this->myPlot->myScatters->clear();
+    slot_switchToImage();
 }
 void MainWindow::updateImage(cv::Mat frame)
 {
@@ -394,56 +395,52 @@ void MainWindow::slot_processBtn1()
     if(dialog_selcetLine->exec())
     {
         if(dialog_selcetLine->checkBox_A->isChecked()){
-            tt.push_back(1);
-        }
+            tt.push_back(0);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_B->isChecked()){
-            tt.push_back(2);
-        }
+            tt.push_back(1);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_C->isChecked()){
-            tt.push_back(3);
-        }
+            tt.push_back(2);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_D->isChecked()){
-            tt.push_back(4);
-        }
+            tt.push_back(3);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_E->isChecked()){
-            tt.push_back(5);
-        }
+            tt.push_back(4);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_F->isChecked()){
-            tt.push_back(6);
-        }
+            tt.push_back(5);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_G->isChecked()){
-            tt.push_back(7);
-        }
+            tt.push_back(6);
+        }else{tt.push_back(-1);}
         if(dialog_selcetLine->checkBox_H->isChecked()){
-            tt.push_back(8);
-        }
+            tt.push_back(7);
+        }else{tt.push_back(-1);}
         if(tt.empty())
             return;
     }
-    if(tt.empty()==true)
+    bool isEmpty = true;
+    foreach (auto item, tt)
+    {
+        if(item !=-1)
+            isEmpty = false;
+    }
+    if(isEmpty==true)
     {
         QMessageBox::warning(this,"WARNING","Select one or more lines",QMessageBox::Close);
         return;
     }
     myTable->clearContents();
-
-    bool pass = true;
     std::string text;
     cv::Mat temp_frame;
     frameBtn1.copyTo(temp_frame);
     mask.clear();
     std::vector<bool> mask_lineTemp;
-
     for(int i=0;i<8;i++)
     {
-        for(int x = 0;x<int(tt.size());x++)
-        {
-            if((tt[x]-1)==i)
-                pass = false;
-            else
-                pass = true;
-        }
-        if(pass == false)
+        if(tt[i] == i)
         {
             for(int j=0;j<12;j++)
             {

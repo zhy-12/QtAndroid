@@ -15,7 +15,7 @@ ABCDdialog::ABCDdialog(QWidget *parent)
     , selectAllButton(new QPushButton("Select All",this))
 {
     setStyleSheet("QcheckBox{border: none;color: white: }"
-                  "QDialog{background: rgb(217,218,214);}"
+                  "QDialog{background-color: rgb(217,218,214);}"
                   "QCheckBox::indicator{Width: 25px;Height: 25px;}");
     QVBoxLayout *layout = new QVBoxLayout(this);
     QHBoxLayout *btnLayout = new QHBoxLayout();
