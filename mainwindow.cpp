@@ -185,7 +185,7 @@ void MainWindow::process_Color(cv::Mat frame, std::vector<std::vector<cv::Point2
 void MainWindow::slot_chooseImage()
 {
     double center_y[]={270, 500, 700, 950, 1150, 1400, 1600, 1825};
-    double center_x[]={320, 550, 770, 990, 1220, 1450, 1680, 1900, 2125, 2350, 2570, 2800};
+    double center_x[]={320, 550, 770, 990, 1220, 1450, 1680, 1900+10, 2125+33, 2350+33, 2570+33, 2800+33};
     std::vector<cv::Point2f> center_temp;
     for(int i=0;i<8;i++)
     {
@@ -325,9 +325,16 @@ void MainWindow::slot_chooseImage()
                 temp_Glucose.push_back(1.4914*temp-0.4627);
                 temp_Absorbance.push_back(temp);
             }
-            else
+            else if(((average_G[i][j] - 219.7655)/(-28.0058)) < 1.84)
             {
                 temp = double((average_G[i][j] - 219.7655)/(-28.0058));
+                temp_H2O2.push_back(0.1683*temp-0.0342);
+                temp_Glucose.push_back(1.4914*temp-0.4627);
+                temp_Absorbance.push_back(temp);
+            }
+            else
+            {
+                temp = double((average_G[i][j] - 203.63)/(-19.243));
                 temp_H2O2.push_back(0.1683*temp-0.0342);
                 temp_Glucose.push_back(1.4914*temp-0.4627);
                 temp_Absorbance.push_back(temp);
@@ -374,17 +381,17 @@ void MainWindow::slot_processBtn1()
     switch (m_sampleType) {
     case sampleType_h202:
         textBuffer = textH2O2;
-        threshold = 0.01;
+        threshold = 0.1;
         updateLabelText(1,"H2O2");
         break;
     case sampleType_glucose:
         textBuffer = textGlucose;
-        threshold = 0.01;
+        threshold = 0.1;
         updateLabelText(1,"Glucose");
         break;
     case sampleType_absorbance:
         textBuffer = textAbsorbance;
-        threshold = 0.12;
+        threshold = 0.1;
         updateLabelText(1,"Absorbance");
         break;
     case sampleType_non:
@@ -448,7 +455,7 @@ void MainWindow::slot_processBtn1()
     {
         if(tt[i] == i)
         {
-            for(int j=0;j<12;j++)
+            for(int j=2;j<10;j++)
             {
                 if(textBuffer[i][j]>threshold)
                 {
@@ -464,7 +471,7 @@ void MainWindow::slot_processBtn1()
                     temp_point.x = center[i][j].x - text_Size.width/2*0.8;
                     temp_point.y = center[i][j].y + text_Size.height/2;
                     cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
-                    //                cv::circle(frameBtn1,center[i][j],15,cv::Scalar(0,0,0),-1);
+                    cv::circle(temp_frame,center[i][j],15,cv::Scalar(0,0,0),-1);
                     //update table items with the corresponding RGB
                     QTableWidgetItem *item = new QTableWidgetItem;
                     item->setBackground(QBrush(QColor(0,0,0)));
