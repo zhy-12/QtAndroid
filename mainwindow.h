@@ -48,6 +48,7 @@ private:
     void updateLabelText(int x, QString str);
     void updateImage(cv::Mat frame);
     void process_Color(cv::Mat frame, std::vector<std::vector<cv::Point2f>>);
+    void saveImage(cv::Mat temp_frame);
 private:
     std::vector<std::vector<cv::Point2f>> center;
     QStackedWidget *stack;

@@ -4,8 +4,8 @@
 sampleDialog::sampleDialog(QWidget *parent)
     : QDialog{parent}
     , h2o2Btn(new QPushButton("H₂O₂",this))
-    , glucoseBtn(new QPushButton("glucose",this))
-    , absorbanceBtn(new QPushButton("absorbance",this))
+    , glucoseBtn(new QPushButton("Glucose",this))
+    , absorbanceBtn(new QPushButton("Absorbance",this))
 
 {
     h2o2Btn->resize(screen()->size().width()/4,screen()->size().width()/8);

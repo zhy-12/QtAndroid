@@ -18,6 +18,7 @@
 #include <QScrollBar>
 #include <QTableWidgetItem>
 #include <rotateimagedialog.h>
+#include <QStandardPaths>
 void printVector(std::vector<QPointF> vector);
 void test1(std::vector<QPointF> &vector,int lo,int hi);//冒泡排序
 int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &effect_area);
@@ -28,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     , myLabel(new QLabel(this))
     , myImageLabel(new imageLabel(this))
     , myButton1(new QPushButton("Model",this))
-    , myButton2(new QPushButton("linear",this))
+    , myButton2(new QPushButton("Fit",this))
     , chooseImageButton(new QPushButton("Select",this))
     , btn_stackToImage(new QPushButton("Image",this))
     , btn_stackToChart(new QPushButton("Chart",this))
@@ -36,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     , myPlot(new plotWidget(this,"chart"))
     , myTable(new QTableWidget(8,12,this))
 {
-    setStyleSheet("QMianWindow{background-color:white;}");
+    setStyleSheet("QMainWindow{background-color:white;}");
     m_sampleType = sampleType_non;
 
     myLabel->setAlignment(Qt::AlignCenter);
@@ -184,15 +185,19 @@ void MainWindow::process_Color(cv::Mat frame, std::vector<std::vector<cv::Point2
 
 void MainWindow::slot_chooseImage()
 {
+    QString filePath;
     double center_y[]={270, 500, 700, 950, 1150, 1400, 1600, 1825};
-    double center_x[]={320, 550, 770, 990, 1220, 1450, 1680, 1900+10, 2125+33, 2350+33, 2570+33, 2800+33};
+//    double center_x[]={320, 550, 770, 990, 1220, 1450, 1680, 1900+10, 2125+33, 2350+33, 2570+33, 2800+33};
+    double center_x[]={320, 550, 770, 990, 1220, 1450, 1680, 1900, 2125, 2350, 2570, 2800};
     std::vector<cv::Point2f> center_temp;
+    center.clear();
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
-            center_temp.push_back(cv::Point2f(center_x[j],center_y[i]));
+            center_temp.push_back(cv::Point(center_x[j],center_y[i]));
         center.push_back(center_temp);
         center_temp.clear();
+
     }
 
     this->setFocus();
@@ -232,6 +237,7 @@ void MainWindow::slot_chooseImage()
     {
         //img_temp = rotateDialog->getPicture().copy(rotateDialog->getPicture().rect());
     }
+    qDebug()<<"\033[31m"<<"旋转完后图片尺寸 width:"<<img_temp.width()<<"height:"<<img_temp.height();
 //    if(img_temp.width()<img_temp.height())
 //    {
 //        QTransform matrix;
@@ -240,11 +246,11 @@ void MainWindow::slot_chooseImage()
 //    }
 
     img_temp = img_temp.convertToFormat(QImage::Format_BGR888);
-    img_temp = img_temp.scaled(QSize(4680,3456),Qt::IgnoreAspectRatio);
+    img_temp = img_temp.scaled(QSize(4608,3456),Qt::IgnoreAspectRatio);
     qDebug()<<"img_temp"<<img_temp.size().width()<<" "<<img_temp.size().height();
     cv::Mat frame(img_temp.height(),img_temp.width(),CV_8UC3,(uchar*)img_temp.bits(),img_temp.bytesPerLine());
     qDebug()<<"frame1:"<<frame.cols<<" "<<frame.rows;
-    cv::resize(frame,frame,cv::Size(4680,3456),0,0,cv::INTER_CUBIC);
+    cv::resize(frame,frame,cv::Size(4608,3456),0,0,cv::INTER_CUBIC);
     qDebug()<<"frame2:"<<frame.cols<<" "<<frame.rows;
     int rows = frame.rows;
     int colums = frame.cols;
@@ -254,51 +260,73 @@ void MainWindow::slot_chooseImage()
     cv::inRange(imgage_hsv,lower_black,upper_black,mask0);
     int rows_m = int(rows/2);
     int colums_m = int(colums/2);
-    int x_top = 0;
-    int x_bottom = 0;
-    int y_top = 0;
-    int y_bottom = 0;
+    int top_Y = 0;
+    int bottom_Y = 0;
+    int top_X = 0;
+    int bottom_X = 0;
+    cv::Scalar temp_sum = 0;
+    cv::Mat temp_mask;
+//    cv::cvtColor(imgage_hsv,temp_mask,cv::COLOR_GRAY2RGB);
+//    saveImage(imgage_hsv);
     for(int i=0;i<rows;++i){
-        if(mask0.at<uchar>(rows_m-i,colums_m) == 255){
-            x_top = rows_m-i;
+        temp_sum = cv::sum(mask0(cv::Rect(colums_m,rows_m-i-10,1,10)));
+        if((mask0.at<uchar>(rows_m-i,colums_m) == 255)&&temp_sum[0]>=2550){
+
+            top_Y = rows_m-i;
             break;
         }
     }
     for(int i=0;i<rows;++i){
         if(mask0.at<uchar>(rows_m+i,colums_m) == 255){
-            x_bottom = rows_m+i;
+            bottom_Y = rows_m+i;
             break;
         }
     }
     for(int i=0;i<rows;++i){
         if(mask0.at<uchar>(rows_m,colums_m-i) == 255){
-            y_top = colums_m-i;
+            top_X = colums_m-i;
             break;
         }
     }
     for(int i=0;i<rows;++i){
-        if(mask0.at<uchar>(rows_m,colums_m+i) == 255){
-            y_bottom = colums_m+i;
+        temp_sum = cv::sum(mask0(cv::Rect(colums_m+i,rows_m,10,1)));
+//        qDebug()<<"temp_sum:"<<temp_sum[0];
+        if((mask0.at<uchar>(rows_m,colums_m+i) == 255)&&temp_sum[0]>=2550){
+
+            bottom_X = colums_m+i;
             break;
         }
     }
 
-    if(!assertRectValid(y_top,x_top,y_bottom-y_top,x_bottom-x_top,frame.cols,frame.rows))
+    if(!assertRectValid(top_X,top_Y,bottom_X-top_X,bottom_Y-top_Y,frame.cols,frame.rows))
     {
         QMessageBox::warning(this,"choose Image error","please retry",QMessageBox::Close);
         return;
     }
+    frame = frame(cv::Rect(top_X,top_Y,bottom_X-top_X,bottom_Y-top_Y));
+//    for(int i=0;i<8;i++)
+//    {
+//        for(int j=0;j<12;j++)
+//        {
+//            cv::circle(frame,center[i][j],10,cv::Scalar(0,0,0),-1);
+//            qDebug()<<i<<","<<j<<":("<<center[i][j].x<<","<<center[i][j].y<<")";
+//        }
 
-    frame = frame(cv::Rect(y_top,x_top,y_bottom-y_top,x_bottom-x_top));
-    qDebug()<<"frame3:"<<frame.cols<<" "<<frame.rows;
+//    }
+//    cv::circle(frame,cv::Point(0,0),20,cv::Scalar(0,0,221),-1);
+    qDebug()<<"\033[31m"<<"裁剪后大小:width:"<<frame.cols<<"height:"<<frame.rows;//3154
+    qDebug()<<"裁剪位置 top_X(865):"<<top_X<<"top_Y:"<<top_Y<<"bottom_X(4019):"<<bottom_X<<"bottom_Y"<<bottom_Y;
+    qDebug()<<"temp_sum"<<temp_sum[0]<<" "<<temp_sum[1]<<" "<<temp_sum[2];
     frame.copyTo(text_frame);
+
+    cv::imwrite(filename[0].toStdString()+"temp.jpg",frame);
     text_frame.copyTo(frameBtn1);
     text_frame.copyTo(frameBtn2);
     process_Color(text_frame, center);
 
 
-    qDebug()<<"average_S:"<<average_S;
-    qDebug()<<"average_G:"<<average_G;
+    //qDebug()<<"average_S:"<<average_S;
+    //qDebug()<<"average_G:"<<average_G;
     textBuffer.clear();
     textH2O2.clear();
     textGlucose.clear();
@@ -307,6 +335,7 @@ void MainWindow::slot_chooseImage()
     std::vector<double> temp_H2O2;
     std::vector<double> temp_Glucose;
     std::vector<double> temp_Absorbance;
+    double tempToPush;
     for(int i=0;i<8;i++)
     {
         for(int j=0;j<12;j++)
@@ -314,33 +343,70 @@ void MainWindow::slot_chooseImage()
             if((average_S[i][j]+35.7905)/219.2612 < 0.52)
             {
                 temp = double((average_S[i][j] + 10.2910)/170.3633);
-                temp_H2O2.push_back(0.1683*temp-0.0342);
-                temp_Glucose.push_back(1.4914*temp-0.4627);
+                tempToPush =0.1683*temp-0.0342;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_H2O2.push_back(0);
+                else
+                    temp_H2O2.push_back(tempToPush);
+
+                tempToPush = 1.4914*temp-0.4627;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_Glucose.push_back(0);
+                else
+                    temp_Glucose.push_back(tempToPush);
+
                 temp_Absorbance.push_back(temp);
             }
             else if(((average_S[i][j] + 35.7905)/(219.2612) < 1) && ((average_S[i][j] + 35.7905)/(219.2612) > 0.52))
             {
                 temp = double((average_S[i][j] + 35.7905)/219.2612);
-                temp_H2O2.push_back(0.1683*temp-0.0342);
-                temp_Glucose.push_back(1.4914*temp-0.4627);
+                tempToPush =0.1683*temp-0.0342;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_H2O2.push_back(0);
+                else
+                    temp_H2O2.push_back(tempToPush);
+
+                tempToPush = 1.4914*temp-0.4627;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_Glucose.push_back(0);
+                else
+                    temp_Glucose.push_back(tempToPush);
                 temp_Absorbance.push_back(temp);
             }
             else if(((average_G[i][j] - 219.7655)/(-28.0058)) < 1.84)
             {
                 temp = double((average_G[i][j] - 219.7655)/(-28.0058));
-                temp_H2O2.push_back(0.1683*temp-0.0342);
-                temp_Glucose.push_back(1.4914*temp-0.4627);
+                tempToPush =0.1683*temp-0.0342;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_H2O2.push_back(0);
+                else
+                    temp_H2O2.push_back(tempToPush);
+
+                tempToPush = 1.4914*temp-0.4627;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_Glucose.push_back(0);
+                else
+                    temp_Glucose.push_back(tempToPush);
                 temp_Absorbance.push_back(temp);
             }
             else
             {
                 temp = double((average_G[i][j] - 203.63)/(-19.243));
-                temp_H2O2.push_back(0.1683*temp-0.0342);
-                temp_Glucose.push_back(1.4914*temp-0.4627);
+                tempToPush =0.1683*temp-0.0342;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_H2O2.push_back(0);
+                else
+                    temp_H2O2.push_back(tempToPush);
+
+                tempToPush = 1.4914*temp-0.4627;
+                if(tempToPush>-0.3&&tempToPush<0)
+                    temp_Glucose.push_back(0);
+                else
+                    temp_Glucose.push_back(tempToPush);
                 temp_Absorbance.push_back(temp);
             }
         }
-        qDebug()<<"temp_H2O2:"<<temp_H2O2;
+        //qDebug()<<"temp_H2O2:"<<temp_H2O2;
         textH2O2.push_back(temp_H2O2);
         textGlucose.push_back(temp_Glucose);
         textAbsorbance.push_back(temp_Absorbance);
@@ -349,6 +415,8 @@ void MainWindow::slot_chooseImage()
         temp_Absorbance.clear();
     }
     updateImage(text_frame);
+    qDebug()<<"average_G[D]:"<<average_G[3];
+    qDebug()<<"average_G[E]:"<<average_G[4];
     this->myPlot->myLineSeries->clear();
     this->myPlot->myScatters->clear();
     slot_switchToImage();
@@ -365,11 +433,20 @@ void MainWindow::updateImage(cv::Mat frame)
 //        myImageLabel->resize(pixImage.size());
 //        myImageLabel->setPixmap(pixImage);
         myImageLabel->show();
+
         update();
+
     }
 
 }
-
+void MainWindow::saveImage(cv::Mat temp_frame)
+{
+    QImage img((const uchar*)(temp_frame.data),temp_frame.cols,temp_frame.rows,temp_frame.step,QImage::Format_RGB888);
+    QString path = QFileDialog::getSaveFileName(this,"保存文件",QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
+    img = img.rgbSwapped();
+    img.save(path );
+    qDebug()<<path;
+}
 void MainWindow::slot_processBtn1()
 {
     double threshold;
@@ -381,24 +458,24 @@ void MainWindow::slot_processBtn1()
     switch (m_sampleType) {
     case sampleType_h202:
         textBuffer = textH2O2;
-        threshold = 0.1;
+        threshold = -0.1;
         updateLabelText(1,"H2O2");
         break;
     case sampleType_glucose:
         textBuffer = textGlucose;
-        threshold = 0.1;
+        threshold = -0.1;
         updateLabelText(1,"Glucose");
         break;
     case sampleType_absorbance:
         textBuffer = textAbsorbance;
-        threshold = 0.1;
+        threshold = -0.1;
         updateLabelText(1,"Absorbance");
         break;
     case sampleType_non:
-        threshold = 0.0;
+        threshold = -0.1;
         return;
     default:
-        threshold = 0.0;
+        threshold = -0.1;
         break;
     }
     if(this->filename.isEmpty() == true&&this->text_frame.empty())
@@ -449,6 +526,7 @@ void MainWindow::slot_processBtn1()
     std::string text;
     cv::Mat temp_frame;
     frameBtn1.copyTo(temp_frame);
+    qDebug()<<"图片大小"<<"width:"<<temp_frame.cols<<"height:"<<temp_frame.rows;
     mask.clear();
     std::vector<bool> mask_lineTemp;
     for(int i=0;i<8;i++)
@@ -471,7 +549,7 @@ void MainWindow::slot_processBtn1()
                     temp_point.x = center[i][j].x - text_Size.width/2*0.8;
                     temp_point.y = center[i][j].y + text_Size.height/2;
                     cv::putText(temp_frame,text,temp_point,cv::FONT_HERSHEY_SIMPLEX,font_scale,cv::Scalar(0,0,0),thickness);
-                    cv::circle(temp_frame,center[i][j],15,cv::Scalar(0,0,0),-1);
+                    //cv::circle(temp_frame,center[i][j],15,cv::Scalar(0,0,0),-1);
                     //update table items with the corresponding RGB
                     QTableWidgetItem *item = new QTableWidgetItem;
                     item->setBackground(QBrush(QColor(0,0,0)));
@@ -493,6 +571,7 @@ void MainWindow::slot_processBtn1()
         mask.push_back(mask_lineTemp);
         mask_lineTemp.clear();
     }
+//    saveImage(temp_frame);
     updateImage(temp_frame);
     this->slot_switchToImage();
 }
